@@ -1,0 +1,224 @@
+[
+ {
+  "id": "b01",
+  "title": "Thinking, Fast and Slow",
+  "author": "Daniel Kahneman",
+  "year": 2011,
+  "topics": ["psychology", "decisions", "bias"],
+  "blurb": "Two systems of thinking, and the predictable biases that show up when the fast one makes decisions the slow one should have checked.",
+  "zh": "思考快与慢 认知偏差 决策",
+  "storeRank": 1
+ },
+ {
+  "id": "b02",
+  "title": "Atomic Habits",
+  "author": "James Clear",
+  "year": 2018,
+  "topics": ["habits", "productivity", "routine"],
+  "blurb": "Small, repeatable changes to your environment and routine matter more than motivation when you want a habit to stick.",
+  "zh": "原子习惯 习惯 自律",
+  "storeRank": 2
+ },
+ {
+  "id": "b03",
+  "title": "The Psychology of Money",
+  "author": "Morgan Housel",
+  "year": 2020,
+  "topics": ["investing", "behavior", "compounding", "risk"],
+  "blurb": "Short essays on why behavior beats intelligence in investing: compounding only works if you never interrupt it, and room for error is what lets you stay in.",
+  "zh": "金钱心理学 复利 长期 不打断 风险 投资行为",
+  "storeRank": 3
+ },
+ {
+  "id": "b04",
+  "title": "Meditations",
+  "author": "Marcus Aurelius",
+  "year": 180,
+  "topics": ["stoicism", "life", "philosophy"],
+  "blurb": "A Roman emperor's private notes to himself on duty, attention and what is within your control.",
+  "zh": "沉思录 斯多葛 人生",
+  "storeRank": 4
+ },
+ {
+  "id": "b05",
+  "title": "Deep Work",
+  "author": "Cal Newport",
+  "year": 2016,
+  "topics": ["focus", "productivity", "schedule"],
+  "blurb": "Why long, undistracted blocks of focus are rare and valuable, and how to protect them from email and chat.",
+  "zh": "深度工作 专注 时间管理",
+  "storeRank": 5
+ },
+ {
+  "id": "b06",
+  "title": "Poor Charlie's Almanack (穷查理宝典)",
+  "author": "Charlie Munger, ed. Peter Kaufman",
+  "year": 2005,
+  "topics": ["investing", "mental-models", "compounding", "incentives"],
+  "blurb": "Munger's talks on a latticework of mental models, inversion, incentives and patient long-term investing.",
+  "zh": "穷查理宝典 芒格 复利 长期投资 思维模型 激励 逆向思考",
+  "storeRank": 6
+ },
+ {
+  "id": "b07",
+  "title": "The Little Book of Common Sense Investing",
+  "author": "John C. Bogle",
+  "year": 2007,
+  "topics": ["investing", "index-funds", "fees"],
+  "blurb": "The case for low-cost index funds: costs compound against you, and most active managers do not beat the market after fees.",
+  "zh": "指数基金 费率 定投 长期持有 低成本",
+  "storeRank": 7
+ },
+ {
+  "id": "b08",
+  "title": "High Output Management",
+  "author": "Andrew S. Grove",
+  "year": 1983,
+  "topics": ["management", "leadership", "metrics", "teams"],
+  "blurb": "A manager's output is the output of their team. Grove covers leverage, one-on-ones, and pairing every indicator with a counter-indicator.",
+  "zh": "格鲁夫 管理 领导力 指标",
+  "storeRank": 8
+ },
+ {
+  "id": "b09",
+  "title": "Make It Stick",
+  "author": "Peter C. Brown, Henry L. Roediger III, Mark A. McDaniel",
+  "year": 2014,
+  "topics": ["learning", "memory", "spaced-repetition", "recall"],
+  "blurb": "The research behind retrieval practice and spacing, and why rereading creates a feeling of familiarity without real recall.",
+  "zh": "认知天性 学习 记忆 间隔重复 复习",
+  "storeRank": 9
+ },
+ {
+  "id": "b10",
+  "title": "Working Backwards",
+  "author": "Colin Bryar, Bill Carr",
+  "year": 2021,
+  "topics": ["product", "writing", "amazon", "leadership"],
+  "blurb": "How Amazon starts from a press release and FAQ, writes narratives instead of slides, and organizes around single-threaded leaders.",
+  "zh": "逆向工作法 亚马逊 产品 写作",
+  "storeRank": 10
+ },
+ {
+  "id": "b11",
+  "title": "Inspired",
+  "author": "Marty Cagan",
+  "year": 2017,
+  "topics": ["product", "product-management", "discovery"],
+  "blurb": "How strong product teams run discovery: test value, usability and feasibility before building, and measure outcomes over output.",
+  "zh": "启示录 产品经理 产品发现",
+  "storeRank": 11
+ },
+ {
+  "id": "b12",
+  "title": "AI Engineering",
+  "author": "Chip Huyen",
+  "year": 2025,
+  "topics": ["ai", "evals", "rag", "llm"],
+  "blurb": "Building applications on foundation models: evaluation, prompt design, retrieval-augmented generation, agents, and when to fine-tune.",
+  "zh": "人工智能 大模型 评估 检索增强",
+  "storeRank": 12
+ },
+ {
+  "id": "b13",
+  "title": "How to Take Smart Notes",
+  "author": "Sönke Ahrens",
+  "year": 2017,
+  "topics": ["notes", "learning", "writing"],
+  "blurb": "The slip-box method: write notes in your own words and link them, so reading turns into ideas you can reuse.",
+  "zh": "卡片笔记写作法 笔记 学习 写作",
+  "storeRank": 13
+ },
+ {
+  "id": "b14",
+  "title": "Designing Data-Intensive Applications",
+  "author": "Martin Kleppmann",
+  "year": 2017,
+  "topics": ["data-systems", "databases", "engineering"],
+  "blurb": "The trade-offs behind storage, replication, partitioning and stream processing, explained from first principles.",
+  "zh": "数据密集型应用 数据库 系统设计",
+  "storeRank": 14
+ },
+ {
+  "id": "b15",
+  "title": "Cracking the PM Interview",
+  "author": "Gayle Laakmann McDowell, Jackie Bavaro",
+  "year": 2013,
+  "topics": ["interview", "product", "career"],
+  "blurb": "Preparing for product manager interviews: product-sense and design questions, estimation, and telling behavioral stories well.",
+  "zh": "产品经理面试 面试 求职",
+  "storeRank": 15
+ },
+ {
+  "id": "b16",
+  "title": "The Mythical Man-Month",
+  "author": "Frederick P. Brooks Jr.",
+  "year": 1975,
+  "topics": ["teams", "coordination", "software", "startups"],
+  "blurb": "Adding people to a late software project makes it later, because communication overhead grows faster than headcount.",
+  "zh": "人月神话 团队 协作 沟通成本",
+  "storeRank": 16
+ },
+ {
+  "id": "b17",
+  "title": "Trustworthy Online Controlled Experiments",
+  "author": "Ron Kohavi, Diane Tang, Ya Xu",
+  "year": 2020,
+  "topics": ["experimentation", "a/b-testing", "metrics", "measurement"],
+  "blurb": "Running A/B tests at scale: choosing an overall evaluation criterion, guardrail metrics, variance reduction, and the pitfalls that fool teams.",
+  "zh": "实验 A/B测试 指标 度量",
+  "storeRank": 17
+ },
+ {
+  "id": "b18",
+  "title": "Tao Te Ching (道德经)",
+  "author": "Laozi",
+  "year": -400,
+  "topics": ["philosophy", "life", "中文"],
+  "blurb": "Short verses on simplicity, restraint and acting without forcing.",
+  "zh": "道德经 老子 无为 哲学",
+  "storeRank": 18
+ },
+ {
+  "id": "b19",
+  "title": "The Art of War",
+  "aliases": ["孙子兵法"],
+  "author": "Sun Tzu",
+  "authorAliases": ["孙子", "Sunzi"],
+  "year": -500,
+  "topics": ["strategy", "competition"],
+  "blurb": "Classic Chinese treatise on strategy: know yourself and your opponent, and win before the battle starts.",
+  "zh": "孙子兵法 战略 知己知彼",
+  "storeRank": 19
+ },
+ {
+  "id": "b20",
+  "title": "Auction Theory",
+  "author": "Vijay Krishna",
+  "year": 2009,
+  "topics": ["auctions", "pricing", "game-theory", "adtech"],
+  "blurb": "A rigorous treatment of first-price and second-price auctions, bidding strategy, revenue equivalence, and how reserve prices change seller revenue.",
+  "zh": "拍卖理论 竞价 定价 博弈论",
+  "storeRank": 20
+ },
+ {
+  "id": "b21",
+  "title": "Building a Second Brain",
+  "author": "Tiago Forte",
+  "year": 2022,
+  "topics": ["notes", "productivity", "review"],
+  "blurb": "A system for capturing, organizing and regularly reviewing what you save, so notes turn into finished work.",
+  "zh": "打造第二大脑 笔记 复盘",
+  "storeRank": 21
+ },
+ {
+  "id": "b22",
+  "title": "Radical Candor",
+  "author": "Kim Scott",
+  "year": 2017,
+  "topics": ["leadership", "feedback", "conflict"],
+  "blurb": "Caring personally while challenging directly: how managers give feedback that is heard instead of avoided.",
+  "zh": "绝对坦率 反馈 领导力",
+  "storeRank": 22
+ }
+]

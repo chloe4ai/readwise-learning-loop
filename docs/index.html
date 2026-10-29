@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learning Loop — a prototype for Readwise</title>
+<meta name="description" content="An independent prototype: capture what you learn in AI conversations as Readwise highlights, make Daily Review aware of what you're working on, and let your highlights pick your next book in Readwise Books.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Independent prototype · built on the public Readwise API · not an official Readwise product</p>
+    <h1>Learning Loop</h1>
+    <p class="lede">Readwise closes the loop on what you <em>read</em>. More and more of what people learn now happens in conversations with AI — and none of it comes back for review. This prototype tries three ideas:</p>
+    <ol class="ideas">
+      <li><strong>Capture:</strong> turn Claude / ChatGPT conversations into highlights worth remembering.</li>
+      <li><strong>Review:</strong> make Daily Review aware of what you're working on this week.</li>
+      <li><strong>Read next</strong> <span class="new">new · for Readwise Books</span>: let your highlights, and what you've been learning in AI chats, pick your next book.</li>
+    </ol>
+    <p class="byline">By <a href="https://github.com/chloe4ai">Chloe Tan</a> · <a href="https://github.com/chloe4ai/readwise-learning-loop">Source on GitHub</a></p>
+  </div>
+</header>
+
+<nav class="tabs wrap" role="tablist">
+  <button role="tab" aria-selected="true" data-tab="capture">① Capture</button>
+  <button role="tab" aria-selected="false" data-tab="review">② Context-aware review</button>
+  <button role="tab" aria-selected="false" data-tab="books">③ What to read next <span class="new">Books</span></button>
+  <button role="tab" aria-selected="false" data-tab="how">④ How it works</button>
+</nav>
+
+<main class="wrap">
+  <!-- ① CAPTURE -->
+  <section id="tab-capture" class="panel" role="tabpanel">
+    <div class="grid2">
+      <div class="card">
+        <h2>Your conversations</h2>
+        <p class="muted">Load the sample, upload a <code>conversations.json</code> export (Claude or ChatGPT), or paste a transcript. Nothing leaves your browser unless you choose to send it.</p>
+        <div class="row">
+          <button class="btn" id="load-sample">Load sample Claude export</button>
+          <label class="btn ghost">Upload .json<input type="file" id="file" accept=".json,.txt,.md" hidden></label>
+        </div>
+        <textarea id="input" rows="12" placeholder="User: What's the difference between first-price and second-price auctions?&#10;Claude: In a second-price auction the winner pays…"></textarea>
+        <fieldset class="mode">
+          <legend>Extraction</legend>
+          <label><input type="radio" name="mode" value="heuristic" checked> Heuristic <span class="muted">(instant, no key, explainable)</span></label>
+          <label><input type="radio" name="mode" value="llm"> LLM <span class="muted">(bring your own Anthropic key)</span></label>
+          <div id="llm-opts" hidden>
+            <input type="password" id="anthropic-key" placeholder="sk-ant-… (kept in memory only)" autocomplete="off">
+            <input type="text" id="model" value="claude-sonnet-4-5" aria-label="Model">
+          </div>
+        </fieldset>
+        <button class="btn primary" id="extract">Extract highlights</button>
+        <p id="parse-status" class="muted small"></p>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>Highlights to keep</h2>
+          <span id="hl-count" class="pill">0</span>
+        </div>
+        <div id="highlights" class="stack empty-state">Run an extraction to see highlights here.</div>
+        <div class="actions" id="export-actions" hidden>
+          <button class="btn" id="dl-csv">Download CSV for Readwise import</button>
+          <button class="btn ghost" id="copy-json">Copy API payload</button>
+          <details class="send">
+            <summary>Send straight to my Readwise</summary>
+            <input type="password" id="rw-token" placeholder="Readwise access token (readwise.io/access_token)" autocomplete="off">
+            <button class="btn primary" id="send-rw">Send selected</button>
+            <p class="muted small">If your browser blocks the request, use the CLI in the repo: <code>node cli/learning-loop.mjs export.json --push</code></p>
+          </details>
+          <button class="btn ghost" id="to-review">Add these to the review demo →</button>
+          <p id="export-status" class="small"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ② REVIEW -->
+  <section id="tab-review" class="panel" role="tabpanel" hidden>
+    <div class="card">
+      <h2>What are you working on this week?</h2>
+      <p class="muted">Daily Review today asks one question: <em>which highlights are due?</em> This adds a second: <em>which due highlights matter to what I'm doing now?</em></p>
+      <input type="text" id="context" value="Preparing for a product-sense interview on ad auctions this Thursday">
+      <div class="chips" id="presets">
+        <button class="chip">Preparing for a product-sense interview on ad auctions this Thursday</button>
+        <button class="chip">最近在研究复利和定投</button>
+        <button class="chip">Designing evals and human review for an AI feature</button>
+        <button class="chip">Trying to build a better weekly review habit</button>
+      </div>
+      <div class="sliders">
+        <label>Relevance vs. due-ness <input type="range" id="w-rel" min="0" max="1" step="0.05" value="0.65"><output id="w-rel-out">0.65</output></label>
+        <label>Diversity (MMR λ) <input type="range" id="lambda" min="0.3" max="1" step="0.05" value="0.75"><output id="lambda-out">0.75</output></label>
+      </div>
+      <p id="lib-note" class="muted small"></p>
+    </div>
+    <div class="grid2 compare">
+      <div class="card">
+        <div class="card-head"><h3>Today: spaced repetition only</h3><span class="pill" id="base-hit"></span></div>
+        <div id="base-list" class="stack"></div>
+      </div>
+      <div class="card accent">
+        <div class="card-head"><h3>With this week's context</h3><span class="pill good" id="ctx-hit"></span></div>
+        <div id="ctx-list" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ③ BOOKS -->
+  <section id="tab-books" class="panel" role="tabpanel" hidden>
+    <div class="card">
+      <h2>Your highlights, choosing your next book</h2>
+      <p class="muted">Most bookstores open on a bestseller list. Readwise Books can open on something no other store has: <em>what you've already highlighted</em>, plus what you've been learning in AI conversations. Every pick below says which of your highlights it came from.</p>
+      <input type="text" id="book-context" value="Preparing for a product-sense interview on ad auctions this Thursday" aria-label="What you're working on this week">
+      <div class="chips" id="book-presets">
+        <button class="chip">Preparing for a product-sense interview on ad auctions this Thursday</button>
+        <button class="chip">最近在研究复利和定投</button>
+        <button class="chip">Designing evals and human review for an AI feature</button>
+        <button class="chip">Trying to build a better weekly review habit</button>
+      </div>
+      <div class="sliders">
+        <label>Long-term taste vs. this week <input type="range" id="w-intent" min="0" max="1" step="0.05" value="0.6"><output id="w-intent-out">0.60</output></label>
+        <label>Diversity (MMR λ) <input type="range" id="book-lambda" min="0.3" max="1" step="0.05" value="0.7"><output id="book-lambda-out">0.70</output></label>
+      </div>
+      <p id="book-note" class="muted small"></p>
+    </div>
+    <div class="grid2 compare">
+      <div class="card">
+        <div class="card-head"><h3>Store default: bestsellers</h3><span class="pill" id="store-hit"></span></div>
+        <div id="store-list" class="stack"></div>
+      </div>
+      <div class="card accent">
+        <div class="card-head"><h3>For you, from your highlights</h3><span class="pill good" id="foryou-hit"></span></div>
+        <div id="foryou-list" class="stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ④ HOW -->
+  <section id="tab-how" class="panel" role="tabpanel" hidden>
+    <div class="card prose">
+      <h2>How it works</h2>
+      <h3>Capture</h3>
+      <ol>
+        <li><strong>Parse.</strong> Claude's and ChatGPT's <code>conversations.json</code> exports, or a pasted transcript, are normalized into turns. For ChatGPT, only the branch you kept (walking up from <code>current_node</code>) is used — regenerated answers you abandoned are ignored.</li>
+        <li><strong>Score sentences.</strong> Each sentence of each answer gets transparent signals: definitions, contrasts ("not X but Y"), rules of thumb, causal claims, bold emphasis, whether it answered your question, and — the strongest signal — whether your <em>next</em> message reacted ("oh interesting", "didn't know that", "原来如此"). Filler ("Great question!") and sentences that depend on context ("It matters most when…") are dropped.</li>
+        <li><strong>Pick a few.</strong> At most two per answer and four per conversation, with near-duplicates suppressed. Your question becomes the highlight's note, so the review card has context.</li>
+        <li><strong>Send.</strong> Highlights go to Readwise via <code>POST /api/v2/highlights/</code> (or a CSV import) with <code>source_type=learning_loop</code> and <code>.ai-chat</code> tags.</li>
+      </ol>
+      <h3>Context-aware review</h3>
+      <p><code>final = w · relevance(context) + (1 − w) · dueness</code>, where relevance is BM25 over highlight text, title and tags, and dueness is days since last review ÷ current interval (capped at 1). The list is then re-ranked with Maximal Marginal Relevance so one book can't take over the session. Chinese text is tokenized with character bigrams, so it works without a segmenter.</p>
+      <p>This is the same shape as an ad or feed ranking stack — a relevance model, a business constraint (spacing), and a diversity pass — scaled down to one reader.</p>
+      <h3>What to read next (Readwise Books)</h3>
+      <p><code>final = w<sub>taste</sub> · taste + w<sub>intent</sub> · intent + w<sub>gap</sub> · gap</code>, then MMR over topics.</p>
+      <ul>
+        <li><strong>Taste:</strong> BM25 affinity between each of your highlights and each book, averaged over the three strongest highlights. Those three are kept as the explanation (“because you highlighted…”).</li>
+        <li><strong>Intent:</strong> how well the book fits what you typed for this week, in English or Chinese.</li>
+        <li><strong>Gap:</strong> the share of that evidence that came from AI conversations. If most of what you know about auctions came from Claude, a real book on auctions is the natural next step.</li>
+        <li><strong>Already read:</strong> books you already have highlights from (matched on title or translated title, plus author) are removed instead of being sold to you again.</li>
+      </ul>
+      <p>This is the commerce version of the same ranking shape: a home feed that blends long-term affinity with session intent, keeps one category from taking over, and says why every item is there.</p>
+      <h3>What a production version would change</h3>
+      <ul>
+        <li>Embeddings instead of BM25 for relevance (Readwise already built hybrid search for MCP).</li>
+        <li>Context inferred, not typed: what's in your Reader inbox this week, your recent tags, your calendar.</li>
+        <li>An evaluation loop: does context-aware review raise "Keep" / "Mastery" rates and 30-day retention versus control?</li>
+        <li>For Books: rank the real catalog with embeddings, add reading-session signals (finished, abandoned, re-read), and test the "for you" shelf against bestsellers on sample opens, purchases and books finished.</li>
+      </ul>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap muted small">
+  Prototype by Chloe Tan. Readwise is a trademark of its owners; this page is an independent prototype and uses only the public API. Sample highlights are public-domain quotes or original sample text. The sample book list uses real titles with short descriptions written for this demo; its order is made up, not sales data.
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

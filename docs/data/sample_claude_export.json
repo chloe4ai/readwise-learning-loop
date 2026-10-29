@@ -1,0 +1,83 @@
+[
+ {
+  "uuid": "c1",
+  "name": "How ad auctions actually price a click",
+  "created_at": "2026-09-14T17:02:00Z",
+  "chat_messages": [
+   {
+    "sender": "human",
+    "created_at": "2026-09-14T17:02:00Z",
+    "text": "What's the real difference between first-price and second-price auctions for ads? Why did the industry switch?"
+   },
+   {
+    "sender": "assistant",
+    "created_at": "2026-09-14T17:02:20Z",
+    "text": "Great question! Here's the short version.\n\nIn a **second-price auction**, the winner pays roughly the second-highest bid, not their own bid. That makes bidding your true value the safest strategy, because overbidding never changes what you pay.\n\nIn a **first-price auction**, the winner pays exactly what they bid. Bidders therefore shade their bids below true value, and the platform has to trust that shading doesn't distort outcomes too much.\n\nThe industry switched mostly because of header bidding. When several exchanges compete for the same impression, each running its own second-price auction, the price rules become opaque and easy to game, so a single first-price rule was simpler to reason about.\n\n- Bid shading is not a bug of first-price auctions but the rational response to them.\n- The key metric to watch after a switch is clearing price per impression, not win rate."
+   },
+   {
+    "sender": "human",
+    "created_at": "2026-09-14T17:04:00Z",
+    "text": "Oh interesting, so shading is expected. How does a reserve price fit in?"
+   },
+   {
+    "sender": "assistant",
+    "created_at": "2026-09-14T17:04:30Z",
+    "text": "A reserve price is the minimum the seller will accept. It matters most when competition is thin, because then the second-highest bid can be far below what the winner would have paid.\n\nSetting reserves too high loses fill rate, while setting them too low leaves money on the table. The trick is to set reserves per segment instead of one global floor, since demand density varies a lot across placements.\n\nLet me know if you want an example with numbers!"
+   },
+   {
+    "sender": "human",
+    "created_at": "2026-09-14T17:06:00Z",
+    "text": "Makes sense, thanks."
+   }
+  ]
+ },
+ {
+  "uuid": "c2",
+  "name": "Why spaced repetition works",
+  "created_at": "2026-09-16T04:10:00Z",
+  "chat_messages": [
+   {
+    "sender": "human",
+    "created_at": "2026-09-16T04:10:00Z",
+    "text": "Why does spaced repetition work better than rereading my notes?"
+   },
+   {
+    "sender": "assistant",
+    "created_at": "2026-09-16T04:10:25Z",
+    "text": "Rereading feels productive because the material becomes familiar, but familiarity is not the same as being able to recall it.\n\nSpaced repetition works because each review is scheduled just before you would forget, so every successful recall strengthens the memory more than an easy review would. This is sometimes called desirable difficulty.\n\nThe spacing effect means the same total study time produces better retention when it is spread out rather than massed into one session.\n\nOne practical rule: review a new idea within a day, then roughly double the interval each time you recall it correctly."
+   },
+   {
+    "sender": "human",
+    "created_at": "2026-09-16T04:12:00Z",
+    "text": "I didn't know familiarity and recall were different. What about highlights I never revisit?"
+   },
+   {
+    "sender": "assistant",
+    "created_at": "2026-09-16T04:12:40Z",
+    "text": "A highlight you never revisit is closer to a bookmark than to knowledge.\n\nThe value of a highlight comes from the moment you retrieve it later, not from the moment you mark it. That is why resurfacing tools help: they create the retrieval moment for you.\n\nIf you only have time for a few reviews, prioritize ideas you expect to use soon, because relevance makes recall stick."
+   }
+  ]
+ },
+ {
+  "uuid": "c3",
+  "name": "复利和定投的区别",
+  "created_at": "2026-09-18T02:30:00Z",
+  "chat_messages": [
+   {
+    "sender": "human",
+    "created_at": "2026-09-18T02:30:00Z",
+    "text": "复利和定投到底是什么关系？是不是定投就能享受复利？"
+   },
+   {
+    "sender": "assistant",
+    "created_at": "2026-09-18T02:30:30Z",
+    "text": "好的，我来解释一下。\n\n复利指的是收益再投入之后继续产生收益，关键变量是时间和收益率。\n\n定投不是复利本身，而是一种降低择时风险的买入方式。定投让你在价格低的时候买到更多份额，所以平均成本更平滑。\n\n**真正决定复利效果的，是你能不能长期不打断它。**频繁卖出会让复利重新从零开始。\n\n希望这能帮到你！"
+   },
+   {
+    "sender": "human",
+    "created_at": "2026-09-18T02:32:00Z",
+    "text": "原来如此，明白了。"
+   }
+  ]
+ }
+]

@@ -1,0 +1,12 @@
+{
+  "name": "readwise-learning-loop",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Capture what you learn in AI conversations as Readwise highlights, make Daily Review aware of what you are working on, and let your highlights pick your next book in Readwise Books.",
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "extract": "node cli/learning-loop.mjs"
+  },
+  "license": "MIT"
+}

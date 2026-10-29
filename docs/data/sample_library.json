@@ -1,0 +1,391 @@
+[
+ {
+  "id": "h1",
+  "text": "If you know the enemy and know yourself, you need not fear the result of a hundred battles.",
+  "title": "The Art of War (Giles translation, 1910)",
+  "author": "Sun Tzu",
+  "tags": [
+   "strategy"
+  ],
+  "daysSinceReview": 40,
+  "intervalDays": 30
+ },
+ {
+  "id": "h2",
+  "text": "知己知彼，百战不殆。",
+  "title": "孙子兵法·谋攻篇",
+  "author": "孙子",
+  "tags": [
+   "strategy",
+   "中文"
+  ],
+  "daysSinceReview": 12,
+  "intervalDays": 30
+ },
+ {
+  "id": "h3",
+  "text": "学而时习之，不亦说乎？",
+  "title": "论语·学而",
+  "author": "孔子",
+  "tags": [
+   "learning",
+   "中文"
+  ],
+  "daysSinceReview": 20,
+  "intervalDays": 14
+ },
+ {
+  "id": "h4",
+  "text": "温故而知新，可以为师矣。",
+  "title": "论语·为政",
+  "author": "孔子",
+  "tags": [
+   "learning",
+   "中文"
+  ],
+  "daysSinceReview": 3,
+  "intervalDays": 14
+ },
+ {
+  "id": "h5",
+  "text": "It is not from the benevolence of the butcher, the brewer, or the baker, that we expect our dinner, but from their regard to their own interest.",
+  "title": "The Wealth of Nations",
+  "author": "Adam Smith",
+  "tags": [
+   "economics",
+   "incentives"
+  ],
+  "daysSinceReview": 25,
+  "intervalDays": 21
+ },
+ {
+  "id": "h6",
+  "text": "A foolish consistency is the hobgoblin of little minds.",
+  "title": "Self-Reliance",
+  "author": "Ralph Waldo Emerson",
+  "tags": [
+   "thinking"
+  ],
+  "daysSinceReview": 9,
+  "intervalDays": 21
+ },
+ {
+  "id": "h7",
+  "text": "I went to the woods because I wished to live deliberately, to front only the essential facts of life, and see if I could not learn what it had to teach.",
+  "title": "Walden",
+  "author": "Henry David Thoreau",
+  "tags": [
+   "life"
+  ],
+  "daysSinceReview": 60,
+  "intervalDays": 30
+ },
+ {
+  "id": "h8",
+  "text": "In a second-price auction the winner pays about the second-highest bid, so bidding true value is the safest strategy.",
+  "title": "Claude chat: How ad auctions price a click",
+  "author": "Claude",
+  "tags": [
+   "adtech",
+   "auctions",
+   "ai-chat"
+  ],
+  "daysSinceReview": 30,
+  "intervalDays": 7
+ },
+ {
+  "id": "h9",
+  "text": "Bid shading is the rational response to first-price auctions, not a bug in them.",
+  "title": "Claude chat: How ad auctions price a click",
+  "author": "Claude",
+  "tags": [
+   "adtech",
+   "auctions",
+   "ai-chat"
+  ],
+  "daysSinceReview": 2,
+  "intervalDays": 7
+ },
+ {
+  "id": "h10",
+  "text": "Set reserve prices per segment rather than one global floor, because demand density varies across placements.",
+  "title": "Claude chat: Reserve prices",
+  "author": "Claude",
+  "tags": [
+   "adtech",
+   "pricing",
+   "ai-chat"
+  ],
+  "daysSinceReview": 15,
+  "intervalDays": 7
+ },
+ {
+  "id": "h11",
+  "text": "Pacing spreads a campaign's budget across the day so it doesn't exhaust in the morning auctions and miss evening demand.",
+  "title": "Sample article: Budget pacing 101",
+  "author": "Sample Author",
+  "tags": [
+   "adtech",
+   "pacing"
+  ],
+  "daysSinceReview": 22,
+  "intervalDays": 14
+ },
+ {
+  "id": "h12",
+  "text": "Measure incrementality with a holdout group; attributed conversions include people who would have bought anyway.",
+  "title": "Sample article: The attribution trap",
+  "author": "Sample Author",
+  "tags": [
+   "measurement",
+   "experimentation"
+  ],
+  "daysSinceReview": 35,
+  "intervalDays": 14
+ },
+ {
+  "id": "h13",
+  "text": "CUPED (Controlled-experiment Using Pre-Experiment Data) reduces variance by adjusting each user's metric with their pre-period behavior.",
+  "title": "ChatGPT chat: Faster A/B tests",
+  "author": "ChatGPT",
+  "tags": [
+   "experimentation",
+   "ai-chat"
+  ],
+  "daysSinceReview": 18,
+  "intervalDays": 10
+ },
+ {
+  "id": "h14",
+  "text": "Familiarity is not recall: rereading makes material feel known without making it retrievable.",
+  "title": "Claude chat: Why spaced repetition works",
+  "author": "Claude",
+  "tags": [
+   "learning",
+   "memory",
+   "ai-chat"
+  ],
+  "daysSinceReview": 1,
+  "intervalDays": 5
+ },
+ {
+  "id": "h15",
+  "text": "A highlight you never revisit is closer to a bookmark than to knowledge.",
+  "title": "Claude chat: Why spaced repetition works",
+  "author": "Claude",
+  "tags": [
+   "learning",
+   "ai-chat"
+  ],
+  "daysSinceReview": 8,
+  "intervalDays": 5
+ },
+ {
+  "id": "h16",
+  "text": "Retrieval-augmented generation (RAG) grounds a model's answer in documents fetched at query time, which reduces hallucination on private data.",
+  "title": "ChatGPT chat: RAG basics",
+  "author": "ChatGPT",
+  "tags": [
+   "ai",
+   "rag",
+   "ai-chat"
+  ],
+  "daysSinceReview": 26,
+  "intervalDays": 10
+ },
+ {
+  "id": "h17",
+  "text": "Hybrid search combines keyword matching with embeddings: keywords catch exact names, embeddings catch paraphrases.",
+  "title": "Claude chat: Search that understands you",
+  "author": "Claude",
+  "tags": [
+   "ai",
+   "search",
+   "ai-chat"
+  ],
+  "daysSinceReview": 11,
+  "intervalDays": 10
+ },
+ {
+  "id": "h18",
+  "text": "An eval set is a product spec written as test cases; if you can't write the eval, you haven't defined the feature.",
+  "title": "Sample article: Evals are the new PRD",
+  "author": "Sample Author",
+  "tags": [
+   "ai",
+   "product",
+   "evals"
+  ],
+  "daysSinceReview": 40,
+  "intervalDays": 14
+ },
+ {
+  "id": "h19",
+  "text": "Human-in-the-loop review is most valuable on the uncertain middle of the score distribution, not on the confident extremes.",
+  "title": "Claude chat: Where to put human reviewers",
+  "author": "Claude",
+  "tags": [
+   "ai",
+   "evals",
+   "ai-chat"
+  ],
+  "daysSinceReview": 19,
+  "intervalDays": 10
+ },
+ {
+  "id": "h20",
+  "text": "In a product-sense interview, state the user and the goal before proposing any feature.",
+  "title": "Sample article: Product-sense interviews",
+  "author": "Sample Author",
+  "tags": [
+   "interview",
+   "product"
+  ],
+  "daysSinceReview": 28,
+  "intervalDays": 7
+ },
+ {
+  "id": "h21",
+  "text": "Tell stories with a clear conflict: the interviewer remembers the trade-off you made, not the list of tasks.",
+  "title": "Claude chat: Behavioral interview prep",
+  "author": "Claude",
+  "tags": [
+   "interview",
+   "storytelling",
+   "ai-chat"
+  ],
+  "daysSinceReview": 9,
+  "intervalDays": 7
+ },
+ {
+  "id": "h22",
+  "text": "For 'tell me about a failure', pick a real one and spend most of the time on what you changed afterward.",
+  "title": "Claude chat: Behavioral interview prep",
+  "author": "Claude",
+  "tags": [
+   "interview",
+   "ai-chat"
+  ],
+  "daysSinceReview": 33,
+  "intervalDays": 7
+ },
+ {
+  "id": "h23",
+  "text": "Good metrics have a counter-metric: if you optimize click-through rate, watch conversion quality too.",
+  "title": "Sample article: Metrics that don't lie",
+  "author": "Sample Author",
+  "tags": [
+   "product",
+   "metrics"
+  ],
+  "daysSinceReview": 16,
+  "intervalDays": 14
+ },
+ {
+  "id": "h24",
+  "text": "Write the press release first; if the headline isn't compelling, the feature probably isn't either.",
+  "title": "Sample article: Working backwards",
+  "author": "Sample Author",
+  "tags": [
+   "product",
+   "writing"
+  ],
+  "daysSinceReview": 45,
+  "intervalDays": 21
+ },
+ {
+  "id": "h25",
+  "text": "复利的关键不是收益率有多高，而是能不能长期不打断它。",
+  "title": "Claude chat: 复利和定投的区别",
+  "author": "Claude",
+  "tags": [
+   "investing",
+   "中文",
+   "ai-chat"
+  ],
+  "daysSinceReview": 6,
+  "intervalDays": 10
+ },
+ {
+  "id": "h26",
+  "text": "定投不是复利本身，而是一种降低择时风险的买入方式。",
+  "title": "Claude chat: 复利和定投的区别",
+  "author": "Claude",
+  "tags": [
+   "investing",
+   "中文",
+   "ai-chat"
+  ],
+  "daysSinceReview": 21,
+  "intervalDays": 10
+ },
+ {
+  "id": "h27",
+  "text": "An index fund's main edge is cost: fees compound against you just as returns compound for you.",
+  "title": "Sample article: Why low fees win",
+  "author": "Sample Author",
+  "tags": [
+   "investing"
+  ],
+  "daysSinceReview": 50,
+  "intervalDays": 21
+ },
+ {
+  "id": "h28",
+  "text": "Position sizing matters more than stock picking for surviving a bad year.",
+  "title": "Sample article: Risk before return",
+  "author": "Sample Author",
+  "tags": [
+   "investing",
+   "risk"
+  ],
+  "daysSinceReview": 14,
+  "intervalDays": 21
+ },
+ {
+  "id": "h29",
+  "text": "Disagree and commit works only if the disagreement was actually heard first.",
+  "title": "Sample article: Healthy conflict",
+  "author": "Sample Author",
+  "tags": [
+   "leadership"
+  ],
+  "daysSinceReview": 31,
+  "intervalDays": 21
+ },
+ {
+  "id": "h30",
+  "text": "Small teams ship faster mainly because fewer handoffs means fewer places for context to leak.",
+  "title": "Sample article: The cost of coordination",
+  "author": "Sample Author",
+  "tags": [
+   "teams",
+   "startups"
+  ],
+  "daysSinceReview": 12,
+  "intervalDays": 21
+ },
+ {
+  "id": "h31",
+  "text": "A weekly review turns scattered notes into decisions; without it, capture tools become storage.",
+  "title": "Sample article: The weekly review",
+  "author": "Sample Author",
+  "tags": [
+   "productivity",
+   "learning"
+  ],
+  "daysSinceReview": 27,
+  "intervalDays": 14
+ },
+ {
+  "id": "h32",
+  "text": "Protect one deep-work block every morning before opening email or chat.",
+  "title": "Sample article: Maker's schedule",
+  "author": "Sample Author",
+  "tags": [
+   "productivity"
+  ],
+  "daysSinceReview": 4,
+  "intervalDays": 14
+ }
+]
