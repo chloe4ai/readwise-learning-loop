@@ -274,3 +274,22 @@ test('pushHighlights reads HTTP-date Retry-After, backs off, and gives up', asyn
   assert.equal(calls, 6);
   assert.ok(waits.every((ms) => ms >= 1000), JSON.stringify(waits));
 });
+
+test('parsing edge cases: empty export, null entries, unknown JSON, attachment-only questions', () => {
+  assert.deepEqual(detectAndParse([]), []);
+  assert.deepEqual(detectAndParse('[]'), []);
+  assert.equal(detectAndParse([null, { name: 'c', chat_messages: [{ sender: 'human', text: 'hi' }] }]).length, 1);
+  assert.equal(parseChatGPTExport([null, { title: 't', mapping: {} }]).length, 1);
+  assert.throws(() => detectAndParse('{"foo":"bar baz"}'), /Unrecognized format/);
+  assert.equal(detectAndParse('[10:00] User: hi')[0].source, 'transcript');
+  const [c] = detectAndParse([{ name: 'c', chat_messages: [
+    { sender: 'human', text: 'What is bid shading in first-price auctions?' },
+    { sender: 'assistant', text: 'Bid shading means bidding below your true value because you pay what you bid in a first-price auction.' },
+    { sender: 'human', text: '', attachments: [{ file_name: 'report.pdf', extracted_content: 'doc' }] },
+    { sender: 'assistant', text: 'The key finding of the report is that reserve prices raise revenue when bidders are few and values are spread out.' },
+  ] }]);
+  assert.deepEqual(c.turns.map((t) => t.role), ['user', 'assistant', 'user', 'assistant']);
+  const hs = extractHighlights([c], { minScore: -99 });
+  const reserve = hs.find((h) => h.text.includes('reserve prices'));
+  assert.equal(reserve.note, 'Q: [Attachment: report.pdf]');
+});

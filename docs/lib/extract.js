@@ -14,7 +14,7 @@ import { tokenize, jaccard, stripMarkdown, isCJKHeavy } from './text.js';
 export function parseClaudeExport(data) {
   const convos = Array.isArray(data) ? data : [data];
   return convos
-    .filter((c) => Array.isArray(c.chat_messages))
+    .filter((c) => c && Array.isArray(c.chat_messages))
     .map((c) => ({
       id: c.uuid || c.name,
       title: c.name || 'Untitled Claude chat',
@@ -32,10 +32,16 @@ export function parseClaudeExport(data) {
 
 function messageText(m) {
   if (typeof m.text === 'string' && m.text.trim()) return m.text;
-  if (Array.isArray(m.content)) {
-    return m.content.filter((p) => p.type === 'text' && p.text).map((p) => p.text).join('\n\n');
-  }
-  return '';
+  const fromContent = Array.isArray(m.content)
+    ? m.content.filter((p) => p && p.type === 'text' && p.text).map((p) => p.text).join('\n\n')
+    : '';
+  if (fromContent.trim() || m.sender !== 'human') return fromContent;
+  // A user message that is only a file still asks something; keep its place so the
+  // answer's "Q:" note doesn't fall back to an earlier, unrelated question.
+  const files = [...(m.attachments || []), ...(m.files || [])].filter(Boolean);
+  if (!files.length) return '';
+  const names = files.map((f) => f.file_name).filter(Boolean);
+  return names.length ? `[Attachment: ${names.join(', ')}]` : '[Attachment]';
 }
 
 export function parseChatGPTExport(data) {
@@ -122,15 +128,19 @@ export function detectAndParse(input, title) {
   if (typeof input === 'string') {
     const trimmed = input.trim();
     if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      let data;
       try {
-        return detectAndParse(JSON.parse(trimmed), title);
+        data = JSON.parse(trimmed);
       } catch {
-        /* fall through to transcript */
+        data = undefined; // not JSON after all: treat it as a transcript
       }
+      // Valid JSON of the wrong shape is an error, not a one-line transcript.
+      if (data !== undefined) return detectAndParse(data, title);
     }
     return parseTranscript(input, title);
   }
-  const sample = Array.isArray(input) ? input[0] : input;
+  if (Array.isArray(input) && !input.some((c) => c != null)) return []; // empty export
+  const sample = Array.isArray(input) ? input.find((c) => c != null) : input;
   if (sample && sample.chat_messages) return parseClaudeExport(input);
   if (sample && sample.mapping) return parseChatGPTExport(input);
   throw new Error('Unrecognized format: expected a Claude or ChatGPT conversations.json, or a transcript.');
