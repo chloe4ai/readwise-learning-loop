@@ -248,3 +248,13 @@ test('weights are clamped and a bad lastReviewed means never reviewed', () => {
   assert.ok(contextualReview(sim, 'auction', { n: 2, lambda: 1.5 }).some((x) => x.h.title === 'B'));
   assert.ok(recommendBooks(library, catalog, 'ad auctions', { wTaste: NaN, lambda: -3 }).picks.every((p) => Number.isFinite(p.final)));
 });
+
+test('books: ownership needs a real title match', () => {
+  const pom = [{ id: 'pom', title: 'The Psychology of Money', author: 'Morgan Housel' }];
+  const own = (title) => ownedBookIds([{ text: 'q', title, author: 'Morgan Housel' }], pom).has('pom');
+  assert.ok(!own(''), 'empty title matches nothing');
+  assert.ok(!own('Money'), 'a short article title is not the book');
+  assert.ok(own('The Psychology of Money'));
+  assert.ok(own('The Psychology of Money: Timeless lessons on wealth'));
+  assert.ok(!own('Psychology of Moneyball'));
+});

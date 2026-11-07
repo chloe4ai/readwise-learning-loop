@@ -31,6 +31,20 @@ function highlightDoc(h) {
 
 const norm = (s) => String(s || '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// `inner` appears in `outer` as whole words (Latin) or as a run of characters (CJK).
+const containsWords = (outer, inner) => new RegExp(`(?<![a-z0-9])${escapeRe(inner)}(?![a-z0-9])`).test(outer);
+
+// Library title `t` vs. catalog name `n` (both normalized). Exact, or the book's name inside a
+// longer title ("The Art of War, annotated"). A short title inside the book's name only counts
+// when it covers most of it, so an article called "Money" is not The Psychology of Money.
+function titleMatches(t, n) {
+  if (!t || !n) return false;
+  if (t === n) return true;
+  if (n.length >= 4 && containsWords(t, n)) return true;
+  return t.length >= 4 && t.length >= n.length * 0.6 && containsWords(n, t);
+}
+
 // A catalog book counts as "already read" when a library highlight matches both its title
 // (or an alias, e.g. a translated title) and its author. Matching on the title alone would
 // wrongly hide "Working Backwards" because of an article with the same name.
@@ -41,7 +55,7 @@ export function ownedBookIds(library, catalog) {
     const names = [b.title, ...(b.aliases || [])].map(norm).filter((n) => n.length >= 2);
     const authors = [b.author, ...(b.authorAliases || [])].map(norm).filter(Boolean);
     const hit = lib.some(({ t, a }) =>
-      names.some((n) => t.includes(n) || n.includes(t)) &&
+      t && names.some((n) => titleMatches(t, n)) &&
       authors.some((x) => a && (x.includes(a) || a.includes(x))));
     if (hit) owned.add(b.id);
   }
