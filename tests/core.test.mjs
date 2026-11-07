@@ -161,3 +161,12 @@ test('books: reasons show the reader\'s words, not stems', () => {
   assert.deepEqual(displayTerms('Preparing for interviews', ['prepar', 'interview']), ['preparing', 'interviews']);
   assert.deepEqual(displayTerms('最近在研究复利和定投', ['复利']), ['复利']);
 });
+
+// ---------- Regressions ----------
+
+test('large libraries do not overflow the call stack', () => {
+  const big = Array.from({ length: 8000 }, (_, i) => ({ text: `auction bid ${i}`, title: `h${i}`, author: 'x' }));
+  assert.equal(recommendBooks(big, catalog, 'auction').picks.length, 5);
+  const huge = Array.from({ length: 150000 }, (_, i) => ({ text: `w${i % 50}`, title: `t${i}`, daysSinceReview: 1 }));
+  assert.equal(contextualReview(huge, 'w1', { n: 1 }).length, 1);
+});

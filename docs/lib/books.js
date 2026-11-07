@@ -79,11 +79,14 @@ export function recommendBooks(library, catalog, context = '', {
     const q = tokenize(highlightDoc(h));
     return catalog.map((_, j) => bm.score(q, j).s);
   });
-  const maxS = Math.max(1e-9, ...S.flat());
+  // Loops, not Math.max(...arr): spreading a large library overflows the call stack.
+  let maxS = 1e-9;
+  for (const row of S) for (const v of row) if (v > maxS) maxS = v;
 
   const q = tokenize(context);
   const intentRaw = catalog.map((_, j) => bm.score(q, j));
-  const maxI = Math.max(1e-9, ...intentRaw.map((r) => r.s));
+  let maxI = 1e-9;
+  for (const r of intentRaw) if (r.s > maxI) maxI = r.s;
 
   const scored = catalog.map((b, j) => {
     const support = library

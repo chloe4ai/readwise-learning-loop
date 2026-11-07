@@ -74,7 +74,9 @@ export function contextualReview(library, context, { n = 5, wRel = 0.65, wDue = 
   const bm = new BM25(library.map(docText));
   const q = tokenize(context);
   const raw = library.map((h, i) => ({ h, i, ...bm.score(q, i) }));
-  const maxS = Math.max(1e-9, ...raw.map((r) => r.s));
+  // A loop, not Math.max(...arr): spreading a large library overflows the call stack.
+  let maxS = 1e-9;
+  for (const r of raw) if (r.s > maxS) maxS = r.s;
   const scored = raw.map((r) => {
     const rel = r.s / maxS;
     const due = dueness(r.h, now);
