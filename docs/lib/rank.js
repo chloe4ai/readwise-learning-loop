@@ -49,9 +49,19 @@ export function dueness(h, now = Date.now()) {
   let days;
   if (typeof h.daysSinceReview === 'number') days = h.daysSinceReview;
   else if (h.lastReviewed) days = (now - new Date(h.lastReviewed).getTime()) / 86400000;
-  else return 1;
+  if (!Number.isFinite(days)) return 1; // never reviewed, or an unparseable date
   const interval = Math.max(1, h.intervalDays || 7);
   return Math.max(0, Math.min(1, days / interval));
+}
+
+// Untitled highlights are not "the same book" as each other.
+const sameSource = (a, b) => !!a.title && a.title === b.title;
+
+// Weights and lambda are fractions; anything else (NaN, negative, > 1) is clamped into [0, 1].
+export function clamp01(x, fallback) {
+  const v = Number(x);
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(0, Math.min(1, v));
 }
 
 function docText(h) {
@@ -71,10 +81,15 @@ export function baselineReview(library, { n = 5, now = Date.now(), seed = 7 } = 
 }
 
 export function contextualReview(library, context, { n = 5, wRel = 0.65, wDue = 0.35, lambda = 0.75, now = Date.now() } = {}) {
+  wRel = clamp01(wRel, 0.65);
+  wDue = clamp01(wDue, 0.35);
+  lambda = clamp01(lambda, 0.75);
   const bm = new BM25(library.map(docText));
   const q = tokenize(context);
   const raw = library.map((h, i) => ({ h, i, ...bm.score(q, i) }));
-  const maxS = Math.max(1e-9, ...raw.map((r) => r.s));
+  // A loop, not Math.max(...arr): spreading a large library overflows the call stack.
+  let maxS = 1e-9;
+  for (const r of raw) if (r.s > maxS) maxS = r.s;
   const scored = raw.map((r) => {
     const rel = r.s / maxS;
     const due = dueness(r.h, now);
@@ -89,7 +104,7 @@ export function contextualReview(library, context, { n = 5, wRel = 0.65, wDue = 
     let bestVal = -Infinity;
     pool.forEach((c, idx) => {
       const sim = picked.length
-        ? Math.max(...picked.map((p) => Math.max(jaccard(p.toks, c.toks), p.h.title === c.h.title ? 0.6 : 0)))
+        ? Math.max(...picked.map((p) => Math.max(jaccard(p.toks, c.toks), sameSource(p.h, c.h) ? 0.6 : 0)))
         : 0;
       const val = lambda * c.final - (1 - lambda) * sim;
       if (val > bestVal) { bestVal = val; best = idx; }

@@ -14,7 +14,7 @@ import { tokenize, jaccard, stripMarkdown, isCJKHeavy } from './text.js';
 export function parseClaudeExport(data) {
   const convos = Array.isArray(data) ? data : [data];
   return convos
-    .filter((c) => Array.isArray(c.chat_messages))
+    .filter((c) => c && Array.isArray(c.chat_messages))
     .map((c) => ({
       id: c.uuid || c.name,
       title: c.name || 'Untitled Claude chat',
@@ -32,10 +32,16 @@ export function parseClaudeExport(data) {
 
 function messageText(m) {
   if (typeof m.text === 'string' && m.text.trim()) return m.text;
-  if (Array.isArray(m.content)) {
-    return m.content.filter((p) => p.type === 'text' && p.text).map((p) => p.text).join('\n\n');
-  }
-  return '';
+  const fromContent = Array.isArray(m.content)
+    ? m.content.filter((p) => p && p.type === 'text' && p.text).map((p) => p.text).join('\n\n')
+    : '';
+  if (fromContent.trim() || m.sender !== 'human') return fromContent;
+  // A user message that is only a file still asks something; keep its place so the
+  // answer's "Q:" note doesn't fall back to an earlier, unrelated question.
+  const files = [...(m.attachments || []), ...(m.files || [])].filter(Boolean);
+  if (!files.length) return '';
+  const names = files.map((f) => f.file_name).filter(Boolean);
+  return names.length ? `[Attachment: ${names.join(', ')}]` : '[Attachment]';
 }
 
 export function parseChatGPTExport(data) {
@@ -45,7 +51,7 @@ export function parseChatGPTExport(data) {
     .map((c) => {
       // Walk from the current leaf up to the root: this is the branch the user actually kept.
       const path = [];
-      let node = c.current_node || lastNodeId(c.mapping);
+      let node = c.current_node && c.mapping[c.current_node] ? c.current_node : lastNodeId(c.mapping);
       const seen = new Set();
       while (node && c.mapping[node] && !seen.has(node)) {
         seen.add(node);
@@ -56,9 +62,11 @@ export function parseChatGPTExport(data) {
       const turns = path
         .map((n) => n.message)
         .filter((m) => m && m.author && (m.author.role === 'user' || m.author.role === 'assistant'))
+        // Assistant messages addressed to a tool (recipient "bio", "python", ...) are not answers.
+        .filter((m) => m.author.role !== 'assistant' || !m.recipient || m.recipient === 'all')
         .map((m) => ({
           role: m.author.role,
-          text: ((m.content && m.content.parts) || []).filter((p) => typeof p === 'string').join('\n\n'),
+          text: ((m.content && m.content.parts) || []).map(partText).filter(Boolean).join('\n\n'),
           at: m.create_time ? new Date(m.create_time * 1000).toISOString() : null,
         }))
         .filter((t) => t.text.trim());
@@ -72,9 +80,24 @@ export function parseChatGPTExport(data) {
     });
 }
 
+// Text parts are strings; voice messages carry { content_type: 'audio_transcription', text }.
+function partText(p) {
+  if (typeof p === 'string') return p;
+  if (p && p.content_type === 'audio_transcription' && typeof p.text === 'string') return p.text;
+  return '';
+}
+
+// Without a usable current_node, take the newest leaf: a regenerated answer is newer than the
+// one it replaced, while key order would pick whichever branch happens to come first.
 function lastNodeId(mapping) {
   const ids = Object.keys(mapping);
-  return ids.find((id) => !(mapping[id].children || []).length) || ids[ids.length - 1];
+  const time = (id) => (mapping[id] && mapping[id].message && mapping[id].message.create_time) || 0;
+  let best = null;
+  for (const id of ids) {
+    if (!mapping[id] || (mapping[id].children || []).length) continue;
+    if (best === null || time(id) >= time(best)) best = id;
+  }
+  return best || ids[ids.length - 1];
 }
 
 const USER_PREFIX = /^\s*(user|human|you|me|我|问)\s*[:：]\s*/i;
@@ -105,15 +128,19 @@ export function detectAndParse(input, title) {
   if (typeof input === 'string') {
     const trimmed = input.trim();
     if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      let data;
       try {
-        return detectAndParse(JSON.parse(trimmed), title);
+        data = JSON.parse(trimmed);
       } catch {
-        /* fall through to transcript */
+        data = undefined; // not JSON after all: treat it as a transcript
       }
+      // Valid JSON of the wrong shape is an error, not a one-line transcript.
+      if (data !== undefined) return detectAndParse(data, title);
     }
     return parseTranscript(input, title);
   }
-  const sample = Array.isArray(input) ? input[0] : input;
+  if (Array.isArray(input) && !input.some((c) => c != null)) return []; // empty export
+  const sample = Array.isArray(input) ? input.find((c) => c != null) : input;
   if (sample && sample.chat_messages) return parseClaudeExport(input);
   if (sample && sample.mapping) return parseChatGPTExport(input);
   throw new Error('Unrecognized format: expected a Claude or ChatGPT conversations.json, or a transcript.');
@@ -130,7 +157,16 @@ const SIGNALS = [
 ];
 
 const FILLER = /^(great question|good question|sure|certainly|absolutely|of course|here('s| is| are)|let me|i can|i'd|i would|happy to|hope this|in summary|to summarize|overall|好的|当然|希望|总结一下)/i;
-const LEARNED = /\b(got it|makes sense|interesting|i see|til|didn'?t know|never knew|aha|oh)\b|明白|懂了|原来|学到|有意思|没想到/i;
+// "You reacted to it": the next user message says they learned something.
+// English phrases match as whole words; 原来 only counts in its "aha" forms (原来如此, 原来…啊),
+// not as "original" (原来的方案). Confusion or pushback in the reply cancels the signal.
+const LEARNED = /\b(got it|makes sense|interesting|i see|til|didn'?t know|never knew|aha|oh)\b|明白|懂了|原来如此|原来是这样|原来(?!的).{0,30}?[啊呀]|学到|有意思|没想到/i;
+const NOT_LEARNED = /不明白|不太明白|没明白|不懂|没懂|看不懂|不对|不太对|错了|没道理|\b(wrong|incorrect|confus\w*|don'?t (understand|get it|see)|do not (understand|see)|doesn'?t|does not|no longer|not sure|makes no sense|i see no|oh no|still (don'?t|not))\b/i;
+
+export function isAha(text) {
+  const head = String(text || '').slice(0, 200);
+  return LEARNED.test(head) && !NOT_LEARNED.test(head);
+}
 const ASKED = /\?|？|\b(what|why|how|explain|difference|when should)\b|什么|为什么|怎么|区别|是不是/i;
 
 function splitUnits(text) {
@@ -145,12 +181,45 @@ function splitUnits(text) {
       units.push({ raw: line, hadBold, bullet: true });
       continue;
     }
-    const parts = isCJKHeavy(line)
-      ? line.split(/(?<=[。！？])/)
-      : line.split(/(?<=[.!?])\s+(?=["“(\[A-Z0-9])/);
+    const parts = splitSentences(line);
     for (const p of parts) if (p.trim()) units.push({ raw: p.trim(), hadBold: /\*\*[^*]+\*\*/.test(p), bullet: false });
   }
   return units;
+}
+
+// Words ending in "." that rarely end a sentence.
+const ABBREV = new Set(['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'st.', 'vs.', 'etc.', 'inc.', 'ltd.', 'co.',
+  'corp.', 'fig.', 'approx.', 'cf.', 'al.', 'jan.', 'feb.', 'mar.', 'apr.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.']);
+const isAbbrev = (word, rest = '') => {
+  const w = word.replace(/^["“'‘(\[]+/, '').toLowerCase();
+  // "No." is an abbreviation only before a number ("No. 5"); "The answer is no." ends a sentence.
+  if (w === 'no.') return /^\s+\d/.test(rest);
+  return ABBREV.has(w) || /^([a-z]\.){2,}$/.test(w) || /^[a-z]\.$/.test(w); // e.g., U.S., initials
+};
+// Sentence end: punctuation, then any closing quotes/brackets, which stay with the sentence.
+const SENT_END = /([。！？]|[.!?]+)([”’"'」』）)\]]*)/g;
+
+export function splitSentences(line) {
+  const cjk = isCJKHeavy(line);
+  const out = [];
+  let start = 0;
+  for (const m of line.matchAll(SENT_END)) {
+    const end = m.index + m[0].length;
+    const p = m[1];
+    let cut;
+    if (/[。！？]/.test(p)) cut = true; // full-width marks end a sentence in any script
+    else if (cjk && /[?!]/.test(p)) cut = true; // Chinese typed with ASCII ?!
+    else if (cjk) cut = false;
+    else {
+      cut = /^\s+["“(\[A-Z0-9\p{Script=Han}]/u.test(line.slice(end));
+      if (cut && p === '.') cut = !isAbbrev(line.slice(start, m.index + 1).split(/\s+/).pop(), line.slice(end));
+    }
+    if (!cut) continue;
+    out.push(line.slice(start, end));
+    start = end;
+  }
+  out.push(line.slice(start));
+  return out.map((x) => x.trim()).filter(Boolean);
 }
 
 export function scoreUnit(unit, ctx) {
@@ -189,7 +258,7 @@ export function extractHighlights(conversations, { perConversation = 4, perTurn 
       const prevUser = [...convo.turns.slice(0, i)].reverse().find((t) => t.role === 'user');
       const nextUser = convo.turns.slice(i + 1).find((t) => t.role === 'user');
       const answersQuestion = !!(prevUser && ASKED.test(prevUser.text));
-      const followedByAha = !!(nextUser && LEARNED.test(nextUser.text.slice(0, 200)));
+      const followedByAha = !!(nextUser && isAha(nextUser.text));
       splitUnits(turn.text).forEach((unit, position) => {
         const s = scoreUnit(unit, { answersQuestion, followedByAha, position });
         if (s.score >= minScore) {

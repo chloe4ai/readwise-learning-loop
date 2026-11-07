@@ -13,7 +13,7 @@
 // highlights it came from. Everything runs client-side; relevance is BM25 (see rank.js).
 
 import { tokenize, jaccard, isCJKHeavy } from './text.js';
-import { BM25 } from './rank.js';
+import { BM25, clamp01 } from './rank.js';
 
 const AI_AUTHORS = new Set(['claude', 'chatgpt', 'ai conversation']);
 
@@ -31,6 +31,20 @@ function highlightDoc(h) {
 
 const norm = (s) => String(s || '').toLowerCase().replace(/\(.*?\)/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// `inner` appears in `outer` as whole words (Latin) or as a run of characters (CJK).
+const containsWords = (outer, inner) => new RegExp(`(?<![a-z0-9])${escapeRe(inner)}(?![a-z0-9])`).test(outer);
+
+// Library title `t` vs. catalog name `n` (both normalized). Exact, or the book's name inside a
+// longer title ("The Art of War, annotated"). A short title inside the book's name only counts
+// when it covers most of it, so an article called "Money" is not The Psychology of Money.
+function titleMatches(t, n) {
+  if (!t || !n) return false;
+  if (t === n) return true;
+  if (n.length >= 4 && containsWords(t, n)) return true;
+  return t.length >= 4 && t.length >= n.length * 0.6 && containsWords(n, t);
+}
+
 // A catalog book counts as "already read" when a library highlight matches both its title
 // (or an alias, e.g. a translated title) and its author. Matching on the title alone would
 // wrongly hide "Working Backwards" because of an article with the same name.
@@ -41,7 +55,7 @@ export function ownedBookIds(library, catalog) {
     const names = [b.title, ...(b.aliases || [])].map(norm).filter((n) => n.length >= 2);
     const authors = [b.author, ...(b.authorAliases || [])].map(norm).filter(Boolean);
     const hit = lib.some(({ t, a }) =>
-      names.some((n) => t.includes(n) || n.includes(t)) &&
+      t && names.some((n) => titleMatches(t, n)) &&
       authors.some((x) => a && (x.includes(a) || a.includes(x))));
     if (hit) owned.add(b.id);
   }
@@ -71,6 +85,10 @@ export function storeDefault(catalog, { n = 5 } = {}) {
 export function recommendBooks(library, catalog, context = '', {
   n = 5, wTaste = 0.35, wIntent = 0.5, wGap = 0.15, lambda = 0.7, supportK = 3,
 } = {}) {
+  wTaste = clamp01(wTaste, 0.35);
+  wIntent = clamp01(wIntent, 0.5);
+  wGap = clamp01(wGap, 0.15);
+  lambda = clamp01(lambda, 0.7);
   const owned = ownedBookIds(library, catalog);
   const bm = new BM25(catalog.map(bookDoc));
 
@@ -79,11 +97,14 @@ export function recommendBooks(library, catalog, context = '', {
     const q = tokenize(highlightDoc(h));
     return catalog.map((_, j) => bm.score(q, j).s);
   });
-  const maxS = Math.max(1e-9, ...S.flat());
+  // Loops, not Math.max(...arr): spreading a large library overflows the call stack.
+  let maxS = 1e-9;
+  for (const row of S) for (const v of row) if (v > maxS) maxS = v;
 
   const q = tokenize(context);
   const intentRaw = catalog.map((_, j) => bm.score(q, j));
-  const maxI = Math.max(1e-9, ...intentRaw.map((r) => r.s));
+  let maxI = 1e-9;
+  for (const r of intentRaw) if (r.s > maxI) maxI = r.s;
 
   const scored = catalog.map((b, j) => {
     const support = library

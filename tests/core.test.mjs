@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { tokenize, stripMarkdown, jaccard } from '../docs/lib/text.js';
-import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights } from '../docs/lib/extract.js';
+import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights, isAha, splitSentences } from '../docs/lib/extract.js';
 import { BM25, dueness, contextualReview, baselineReview } from '../docs/lib/rank.js';
-import { toApiHighlight, toCSV, pushHighlights, SOURCE_TYPE } from '../docs/lib/readwise.js';
+import { toApiHighlight, toCSV, pushHighlights, retryAfterMs, SOURCE_TYPE } from '../docs/lib/readwise.js';
 
 const claude = JSON.parse(readFileSync(new URL('../docs/data/sample_claude_export.json', import.meta.url)));
 const library = JSON.parse(readFileSync(new URL('../docs/data/sample_library.json', import.meta.url)));
@@ -160,4 +160,146 @@ test('books: MMR keeps one topic from taking over the shelf', () => {
 test('books: reasons show the reader\'s words, not stems', () => {
   assert.deepEqual(displayTerms('Preparing for interviews', ['prepar', 'interview']), ['preparing', 'interviews']);
   assert.deepEqual(displayTerms('最近在研究复利和定投', ['复利']), ['复利']);
+});
+
+// ---------- Regressions ----------
+
+test('large libraries do not overflow the call stack', () => {
+  const big = Array.from({ length: 8000 }, (_, i) => ({ text: `auction bid ${i}`, title: `h${i}`, author: 'x' }));
+  assert.equal(recommendBooks(big, catalog, 'auction').picks.length, 5);
+  const huge = Array.from({ length: 150000 }, (_, i) => ({ text: `w${i % 50}`, title: `t${i}`, daysSinceReview: 1 }));
+  assert.equal(contextualReview(huge, 'w1', { n: 1 }).length, 1);
+});
+
+test('"you reacted" fires on aha replies, not on confusion or pushback', () => {
+  for (const r of ['Oh interesting!', "I didn't know that", '原来如此', '原来是这样', '原来复利这么厉害啊', 'TIL about bid shading',
+    'ok that makes sense now', 'got it, thanks', '懂了', '学到了'])
+    assert.ok(isAha(r), r);
+  for (const r of ['我不明白', '原来的方案更好', 'Oh no, that is wrong.', 'it no longer makes sense', 'I see no reason',
+    "That doesn't make sense", "I don't understand", "I'm confused", '没懂', '这不对', 'until tomorrow', 'ohm law'])
+    assert.ok(!isAha(r), r);
+  const convo = (reply) => [{ id: 1, title: 't', source: 'claude', turns: [
+    { role: 'user', text: '什么是复利？' },
+    { role: 'assistant', text: '复利是指利息也会继续产生利息，时间越长效果越明显。' },
+    { role: 'user', text: reply }] }];
+  const reacted = (reply) => extractHighlights(convo(reply), { minScore: -99 })[0].reasons.includes('you reacted to it');
+  assert.ok(reacted('原来如此！'));
+  assert.ok(!reacted('我不明白'));
+});
+
+const gptMsg = (role, parts, extra = {}) => ({ author: { role }, content: { content_type: 'text', parts }, ...extra });
+
+test('ChatGPT without a usable current_node follows the newest leaf', () => {
+  const mapping = {
+    r: { parent: null, children: ['u'] },
+    u: { parent: 'r', children: ['old', 'new'], message: gptMsg('user', ['q?'], { create_time: 1 }) },
+    old: { parent: 'u', children: [], message: gptMsg('assistant', ['ABANDONED'], { create_time: 2 }) },
+    new: { parent: 'u', children: [], message: gptMsg('assistant', ['REGENERATED'], { create_time: 3 }) },
+  };
+  assert.deepEqual(parseChatGPTExport([{ title: 't', mapping }])[0].turns.map((t) => t.text), ['q?', 'REGENERATED']);
+  assert.deepEqual(parseChatGPTExport([{ title: 't', current_node: 'gone', mapping }])[0].turns.map((t) => t.text), ['q?', 'REGENERATED']);
+});
+
+test('ChatGPT reads voice transcriptions and skips tool-addressed messages', () => {
+  const voice = (t) => ({ content_type: 'audio_transcription', text: t });
+  const [c] = parseChatGPTExport([{ title: 't', current_node: 'b', mapping: {
+    u: { parent: null, children: ['a'], message: { author: { role: 'user' }, content: { content_type: 'multimodal_text', parts: [voice('why is the sky blue?')] } } },
+    a: { parent: 'u', children: ['b'], message: gptMsg('assistant', ['User asked about sky.'], { recipient: 'bio' }) },
+    b: { parent: 'a', children: [], message: { author: { role: 'assistant' }, recipient: 'all', content: { content_type: 'multimodal_text', parts: [voice('Rayleigh scattering.')] } } },
+  } }]);
+  assert.deepEqual(c.turns.map((t) => [t.role, t.text]), [['user', 'why is the sky blue?'], ['assistant', 'Rayleigh scattering.']]);
+});
+
+test('tokenize keeps neighbours of stop characters and normalizes width and accents', () => {
+  assert.ok(tokenize('我的书').includes('书'));
+  assert.deepEqual(tokenize('很好'), ['好']);
+  assert.deepEqual(tokenize('ＡＩ产品'), ['产品', 'ai']);
+  assert.deepEqual(tokenize('café naïve'), ['cafe', 'naive']);
+  assert.deepEqual(tokenize('𠀀𠀁'), ['𠀀𠀁']);
+  assert.deepEqual(tokenize('日本語のテキスト'), ['日本', '本語', 'テキ', 'キス', 'スト']);
+});
+
+test('sentence splitting respects abbreviations, CJK punctuation and closing quotes', () => {
+  assert.deepEqual(splitSentences('Dr. Smith showed that auctions are truthful. U.S. rules differ, e.g. Fed rules. Mrs. Lee agreed.'),
+    ['Dr. Smith showed that auctions are truthful.', 'U.S. rules differ, e.g. Fed rules.', 'Mrs. Lee agreed.']);
+  assert.deepEqual(splitSentences('使用 React Server Components 时 hydration mismatch 很常见。另外 useEffect hook 不会在 server 运行。'),
+    ['使用 React Server Components 时 hydration mismatch 很常见。', '另外 useEffect hook 不会在 server 运行。']);
+  assert.deepEqual(splitSentences('他说：“复利是世界第八大奇迹。”然后他解释了原因。'), ['他说：“复利是世界第八大奇迹。”', '然后他解释了原因。']);
+  assert.deepEqual(splitSentences('复利为什么重要?因为时间会放大收益!所以越早越好。'), ['复利为什么重要?', '因为时间会放大收益!', '所以越早越好。']);
+  // "No." abbreviates only before a number.
+  assert.deepEqual(splitSentences('See No. 5 for details. The short answer is no. Index funds win.'),
+    ['See No. 5 for details.', 'The short answer is no.', 'Index funds win.']);
+});
+
+test('MMR does not treat untitled highlights as one source', () => {
+  const mk = (t) => [{ text: 'auction bidding', title: t[0], daysSinceReview: 5 }, { text: 'auction reserve price', title: t[1], daysSinceReview: 5 }];
+  const untitled = contextualReview(mk([undefined, undefined]), 'auction', { n: 2 })[1].mmr;
+  const distinct = contextualReview(mk(['A', 'B']), 'auction', { n: 2 })[1].mmr;
+  assert.equal(untitled, distinct);
+});
+
+test('weights are clamped and a bad lastReviewed means never reviewed', () => {
+  assert.equal(dueness({ lastReviewed: 'not a date' }), 1);
+  const r = contextualReview([{ text: 'zebra', title: 'a', lastReviewed: 'bad' }, { text: 'auction auction', title: 'b', daysSinceReview: 7 }], 'auction', { n: 2 });
+  assert.ok(r.every((x) => Number.isFinite(x.final)));
+  // wDue = -0.5 must not reward recently reviewed highlights
+  const lib = [{ text: 'x', title: 'a', daysSinceReview: 0 }, { text: 'y', title: 'b', daysSinceReview: 30 }];
+  const neg = contextualReview(lib, '', { n: 2, wRel: 1.5, wDue: -0.5 });
+  assert.ok(neg.every((x) => x.final >= 0 && x.final <= 1), JSON.stringify(neg.map((x) => x.final)));
+  // lambda = 1.5 must not reward similarity
+  const sim = [{ text: 'auction bid', title: 'A' }, { text: 'auction bid shading', title: 'A' }, { text: 'auction reserve', title: 'B' }];
+  assert.ok(contextualReview(sim, 'auction', { n: 2, lambda: 1.5 }).some((x) => x.h.title === 'B'));
+  assert.ok(recommendBooks(library, catalog, 'ad auctions', { wTaste: NaN, lambda: -3 }).picks.every((p) => Number.isFinite(p.final)));
+});
+
+test('books: ownership needs a real title match', () => {
+  const pom = [{ id: 'pom', title: 'The Psychology of Money', author: 'Morgan Housel' }];
+  const own = (title) => ownedBookIds([{ text: 'q', title, author: 'Morgan Housel' }], pom).has('pom');
+  assert.ok(!own(''), 'empty title matches nothing');
+  assert.ok(!own('Money'), 'a short article title is not the book');
+  assert.ok(own('The Psychology of Money'));
+  assert.ok(own('The Psychology of Money: Timeless lessons on wealth'));
+  assert.ok(!own('Psychology of Moneyball'));
+});
+
+test('pushHighlights reads HTTP-date Retry-After, backs off, and gives up', async () => {
+  const now = Date.parse('Wed, 21 Oct 2026 07:28:00 GMT');
+  assert.equal(retryAfterMs('Wed, 21 Oct 2026 07:28:30 GMT', now), 30000);
+  assert.equal(retryAfterMs('Wed, 21 Oct 2026 07:27:00 GMT', now), 0);
+  assert.equal(retryAfterMs('12', now), 12000);
+  assert.equal(retryAfterMs('garbage', now), null);
+  let calls = 0;
+  const waits = [];
+  const fetchImpl = async () => { calls++; return { status: 429, ok: false, headers: { get: () => 'Wed, 21 Oct 2015 07:28:00 GMT' } }; };
+  await assert.rejects(
+    pushHighlights('tok', [{ text: 'a', title: 'b' }], { fetchImpl, wait: async (ms) => { waits.push(ms); } }),
+    /gave up after 5 retries/);
+  assert.equal(calls, 6);
+  assert.ok(waits.every((ms) => ms >= 1000), JSON.stringify(waits));
+});
+
+test('parsing edge cases: empty export, null entries, unknown JSON, attachment-only questions', () => {
+  assert.deepEqual(detectAndParse([]), []);
+  assert.deepEqual(detectAndParse('[]'), []);
+  assert.equal(detectAndParse([null, { name: 'c', chat_messages: [{ sender: 'human', text: 'hi' }] }]).length, 1);
+  assert.equal(parseChatGPTExport([null, { title: 't', mapping: {} }]).length, 1);
+  assert.throws(() => detectAndParse('{"foo":"bar baz"}'), /Unrecognized format/);
+  assert.equal(detectAndParse('[10:00] User: hi')[0].source, 'transcript');
+  const [c] = detectAndParse([{ name: 'c', chat_messages: [
+    { sender: 'human', text: 'What is bid shading in first-price auctions?' },
+    { sender: 'assistant', text: 'Bid shading means bidding below your true value because you pay what you bid in a first-price auction.' },
+    { sender: 'human', text: '', attachments: [{ file_name: 'report.pdf', extracted_content: 'doc' }] },
+    { sender: 'assistant', text: 'The key finding of the report is that reserve prices raise revenue when bidders are few and values are spread out.' },
+  ] }]);
+  assert.deepEqual(c.turns.map((t) => t.role), ['user', 'assistant', 'user', 'assistant']);
+  const hs = extractHighlights([c], { minScore: -99 });
+  const reserve = hs.find((h) => h.text.includes('reserve prices'));
+  assert.equal(reserve.note, 'Q: [Attachment: report.pdf]');
+});
+
+test('CSV neutralizes formula-looking cells', () => {
+  const csv = toCSV([{ text: '=HYPERLINK("http://evil","x")', title: '+cmd', author: '@me', note: '-1+2', location: 1 }]);
+  const row = csv.split('\n')[1];
+  assert.ok(row.startsWith(`"'=HYPERLINK(""http://evil"",""x"")"`), row);
+  assert.ok(row.includes(",'+cmd,'@me,,'-1+2,1,"), row);
 });

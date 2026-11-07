@@ -7,9 +7,9 @@ too us very was we were what when where which while who why will with would you 
 other some been being get got here let make much many should via using use used really`.split(/\s+/));
 
 // Function characters that make poor bigrams (的, 了, 和 ...).
-const CJK_STOP = new Set('的了和是在也就都而及与或着把被让给吗呢吧啊很最'.split(''));
-const CJK = /[㐀-鿿豈-﫿]/;
-const CJK_RUN = /[㐀-鿿豈-﫿]+/g;
+const CJK_STOP = new Set('的了和是在也就都而及与或着把被让给吗呢吧啊很最のはがをにでとも'.split(''));
+// Han (including the supplementary Extension B+ planes) and Japanese kana.
+const CJK_RUN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}ー]+/gu;
 
 export function isCJKHeavy(s) {
   const cjk = (s.match(CJK_RUN) || []).join('').length;
@@ -26,19 +26,37 @@ function stem(w) {
 
 // English: lowercase words minus stopwords, lightly stemmed.
 // Chinese: character bigrams (a standard trick when no segmenter is available).
+// Full-width ASCII → ASCII (ＡＩ → AI), and Latin diacritics dropped (café → cafe).
+// Marks are only stripped after Latin letters, so kana like が keep their dakuten.
+export function normalizeText(s) {
+  return String(s)
+    .normalize('NFKC')
+    .normalize('NFD')
+    .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
+    .normalize('NFC')
+    .toLowerCase();
+}
+
 export function tokenize(s) {
   if (!s) return [];
   const out = [];
-  const lower = s.toLowerCase();
+  const lower = normalizeText(s);
   for (const run of lower.match(CJK_RUN) || []) {
-    if (run.length === 1) out.push(run);
-    for (let i = 0; i < run.length - 1; i++) {
-      if (CJK_STOP.has(run[i]) || CJK_STOP.has(run[i + 1])) continue;
-      out.push(run.slice(i, i + 2));
+    // Stop characters split the run instead of erasing their neighbours: 我的书 → 我, 书.
+    let seg = [];
+    const flush = () => {
+      if (seg.length === 1) out.push(seg[0]);
+      for (let i = 0; i < seg.length - 1; i++) out.push(seg[i] + seg[i + 1]);
+      seg = [];
+    };
+    for (const ch of run) { // for…of walks code points, so Extension B characters stay whole
+      if (CJK_STOP.has(ch)) flush();
+      else seg.push(ch);
     }
+    flush();
   }
   const latin = lower.replace(CJK_RUN, ' ');
-  for (const w of latin.match(/[a-z0-9][a-z0-9'-]*/g) || []) {
+  for (const w of latin.match(/[\p{L}\p{N}][\p{L}\p{N}'-]*/gu) || []) {
     const t = w.replace(/'s$/, '').replace(/^-+|-+$/g, '');
     if (t.length < 2 || STOP.has(t)) continue;
     out.push(stem(t));
