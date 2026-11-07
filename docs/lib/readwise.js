@@ -30,7 +30,9 @@ export function toApiPayload(highlights) {
 export const CSV_HEADER = ['Highlight', 'Title', 'Author', 'URL', 'Note', 'Location', 'Date'];
 
 function csvCell(v) {
-  const s = v == null ? '' : String(v);
+  let s = v == null ? '' : String(v);
+  // A leading = + - @ (or tab/CR) makes spreadsheets run the cell as a formula; quote it out.
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 

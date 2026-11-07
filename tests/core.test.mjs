@@ -293,3 +293,10 @@ test('parsing edge cases: empty export, null entries, unknown JSON, attachment-o
   const reserve = hs.find((h) => h.text.includes('reserve prices'));
   assert.equal(reserve.note, 'Q: [Attachment: report.pdf]');
 });
+
+test('CSV neutralizes formula-looking cells', () => {
+  const csv = toCSV([{ text: '=HYPERLINK("http://evil","x")', title: '+cmd', author: '@me', note: '-1+2', location: 1 }]);
+  const row = csv.split('\n')[1];
+  assert.ok(row.startsWith(`"'=HYPERLINK(""http://evil"",""x"")"`), row);
+  assert.ok(row.includes(",'+cmd,'@me,,'-1+2,1,"), row);
+});
