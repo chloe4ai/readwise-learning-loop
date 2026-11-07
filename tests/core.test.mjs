@@ -209,3 +209,12 @@ test('ChatGPT reads voice transcriptions and skips tool-addressed messages', () 
   } }]);
   assert.deepEqual(c.turns.map((t) => [t.role, t.text]), [['user', 'why is the sky blue?'], ['assistant', 'Rayleigh scattering.']]);
 });
+
+test('tokenize keeps neighbours of stop characters and normalizes width and accents', () => {
+  assert.ok(tokenize('我的书').includes('书'));
+  assert.deepEqual(tokenize('很好'), ['好']);
+  assert.deepEqual(tokenize('ＡＩ产品'), ['产品', 'ai']);
+  assert.deepEqual(tokenize('café naïve'), ['cafe', 'naive']);
+  assert.deepEqual(tokenize('𠀀𠀁'), ['𠀀𠀁']);
+  assert.deepEqual(tokenize('日本語のテキスト'), ['日本', '本語', 'テキ', 'キス', 'スト']);
+});
