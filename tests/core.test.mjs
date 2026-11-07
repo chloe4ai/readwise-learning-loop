@@ -227,3 +227,10 @@ test('sentence splitting respects abbreviations, CJK punctuation and closing quo
   assert.deepEqual(splitSentences('他说：“复利是世界第八大奇迹。”然后他解释了原因。'), ['他说：“复利是世界第八大奇迹。”', '然后他解释了原因。']);
   assert.deepEqual(splitSentences('复利为什么重要?因为时间会放大收益!所以越早越好。'), ['复利为什么重要?', '因为时间会放大收益!', '所以越早越好。']);
 });
+
+test('MMR does not treat untitled highlights as one source', () => {
+  const mk = (t) => [{ text: 'auction bidding', title: t[0], daysSinceReview: 5 }, { text: 'auction reserve price', title: t[1], daysSinceReview: 5 }];
+  const untitled = contextualReview(mk([undefined, undefined]), 'auction', { n: 2 })[1].mmr;
+  const distinct = contextualReview(mk(['A', 'B']), 'auction', { n: 2 })[1].mmr;
+  assert.equal(untitled, distinct);
+});

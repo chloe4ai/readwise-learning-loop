@@ -54,6 +54,9 @@ export function dueness(h, now = Date.now()) {
   return Math.max(0, Math.min(1, days / interval));
 }
 
+// Untitled highlights are not "the same book" as each other.
+const sameSource = (a, b) => !!a.title && a.title === b.title;
+
 function docText(h) {
   return [h.text, h.title, h.author, (h.tags || []).join(' ')].join(' ');
 }
@@ -91,7 +94,7 @@ export function contextualReview(library, context, { n = 5, wRel = 0.65, wDue = 
     let bestVal = -Infinity;
     pool.forEach((c, idx) => {
       const sim = picked.length
-        ? Math.max(...picked.map((p) => Math.max(jaccard(p.toks, c.toks), p.h.title === c.h.title ? 0.6 : 0)))
+        ? Math.max(...picked.map((p) => Math.max(jaccard(p.toks, c.toks), sameSource(p.h, c.h) ? 0.6 : 0)))
         : 0;
       const val = lambda * c.final - (1 - lambda) * sim;
       if (val > bestVal) { bestVal = val; best = idx; }
