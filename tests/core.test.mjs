@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { tokenize, stripMarkdown, jaccard } from '../docs/lib/text.js';
 import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights, isAha, splitSentences } from '../docs/lib/extract.js';
 import { BM25, dueness, contextualReview, baselineReview } from '../docs/lib/rank.js';
-import { toApiHighlight, toCSV, pushHighlights, SOURCE_TYPE } from '../docs/lib/readwise.js';
+import { toApiHighlight, toCSV, pushHighlights, retryAfterMs, SOURCE_TYPE } from '../docs/lib/readwise.js';
 
 const claude = JSON.parse(readFileSync(new URL('../docs/data/sample_claude_export.json', import.meta.url)));
 const library = JSON.parse(readFileSync(new URL('../docs/data/sample_library.json', import.meta.url)));
@@ -257,4 +257,20 @@ test('books: ownership needs a real title match', () => {
   assert.ok(own('The Psychology of Money'));
   assert.ok(own('The Psychology of Money: Timeless lessons on wealth'));
   assert.ok(!own('Psychology of Moneyball'));
+});
+
+test('pushHighlights reads HTTP-date Retry-After, backs off, and gives up', async () => {
+  const now = Date.parse('Wed, 21 Oct 2026 07:28:00 GMT');
+  assert.equal(retryAfterMs('Wed, 21 Oct 2026 07:28:30 GMT', now), 30000);
+  assert.equal(retryAfterMs('Wed, 21 Oct 2026 07:27:00 GMT', now), 0);
+  assert.equal(retryAfterMs('12', now), 12000);
+  assert.equal(retryAfterMs('garbage', now), null);
+  let calls = 0;
+  const waits = [];
+  const fetchImpl = async () => { calls++; return { status: 429, ok: false, headers: { get: () => 'Wed, 21 Oct 2015 07:28:00 GMT' } }; };
+  await assert.rejects(
+    pushHighlights('tok', [{ text: 'a', title: 'b' }], { fetchImpl, wait: async (ms) => { waits.push(ms); } }),
+    /gave up after 5 retries/);
+  assert.equal(calls, 6);
+  assert.ok(waits.every((ms) => ms >= 1000), JSON.stringify(waits));
 });

@@ -44,8 +44,22 @@ export async function checkToken(token, fetchImpl = fetch) {
   return r.status === 204;
 }
 
-export async function pushHighlights(token, highlights, { fetchImpl = fetch, batchSize = 100 } = {}) {
+// Retry-After is either delta-seconds ("30") or an HTTP date ("Wed, 21 Oct 2026 07:28:00 GMT").
+export function retryAfterMs(value, now = Date.now()) {
+  if (value == null || String(value).trim() === '') return null;
+  const v = String(value).trim();
+  if (/^\d+(\.\d+)?$/.test(v)) return Number(v) * 1000;
+  const at = Date.parse(v);
+  return Number.isFinite(at) ? Math.max(0, at - now) : null;
+}
+
+const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+
+export async function pushHighlights(token, highlights, {
+  fetchImpl = fetch, batchSize = 100, maxRetries = 5, minBackoffMs = 1000, wait = sleep,
+} = {}) {
   let sent = 0;
+  let retries = 0;
   for (let i = 0; i < highlights.length; i += batchSize) {
     const batch = highlights.slice(i, i + batchSize);
     const r = await fetchImpl('https://readwise.io/api/v2/highlights/', {
@@ -54,12 +68,14 @@ export async function pushHighlights(token, highlights, { fetchImpl = fetch, bat
       body: JSON.stringify(toApiPayload(batch)),
     });
     if (r.status === 429) {
-      const wait = Number(r.headers.get('Retry-After') || 5);
-      await new Promise((res) => setTimeout(res, wait * 1000));
+      if (++retries > maxRetries) throw new Error(`Readwise API is rate limiting; gave up after ${maxRetries} retries`);
+      const ms = retryAfterMs(r.headers.get('Retry-After')) ?? 5000;
+      await wait(Math.max(minBackoffMs, ms));
       i -= batchSize;
       continue;
     }
     if (!r.ok) throw new Error(`Readwise API error ${r.status}: ${await r.text()}`);
+    retries = 0;
     sent += batch.length;
   }
   return sent;
