@@ -45,7 +45,7 @@ export function parseChatGPTExport(data) {
     .map((c) => {
       // Walk from the current leaf up to the root: this is the branch the user actually kept.
       const path = [];
-      let node = c.current_node || lastNodeId(c.mapping);
+      let node = c.current_node && c.mapping[c.current_node] ? c.current_node : lastNodeId(c.mapping);
       const seen = new Set();
       while (node && c.mapping[node] && !seen.has(node)) {
         seen.add(node);
@@ -56,9 +56,11 @@ export function parseChatGPTExport(data) {
       const turns = path
         .map((n) => n.message)
         .filter((m) => m && m.author && (m.author.role === 'user' || m.author.role === 'assistant'))
+        // Assistant messages addressed to a tool (recipient "bio", "python", ...) are not answers.
+        .filter((m) => m.author.role !== 'assistant' || !m.recipient || m.recipient === 'all')
         .map((m) => ({
           role: m.author.role,
-          text: ((m.content && m.content.parts) || []).filter((p) => typeof p === 'string').join('\n\n'),
+          text: ((m.content && m.content.parts) || []).map(partText).filter(Boolean).join('\n\n'),
           at: m.create_time ? new Date(m.create_time * 1000).toISOString() : null,
         }))
         .filter((t) => t.text.trim());
@@ -72,9 +74,24 @@ export function parseChatGPTExport(data) {
     });
 }
 
+// Text parts are strings; voice messages carry { content_type: 'audio_transcription', text }.
+function partText(p) {
+  if (typeof p === 'string') return p;
+  if (p && p.content_type === 'audio_transcription' && typeof p.text === 'string') return p.text;
+  return '';
+}
+
+// Without a usable current_node, take the newest leaf: a regenerated answer is newer than the
+// one it replaced, while key order would pick whichever branch happens to come first.
 function lastNodeId(mapping) {
   const ids = Object.keys(mapping);
-  return ids.find((id) => !(mapping[id].children || []).length) || ids[ids.length - 1];
+  const time = (id) => (mapping[id] && mapping[id].message && mapping[id].message.create_time) || 0;
+  let best = null;
+  for (const id of ids) {
+    if (!mapping[id] || (mapping[id].children || []).length) continue;
+    if (best === null || time(id) >= time(best)) best = id;
+  }
+  return best || ids[ids.length - 1];
 }
 
 const USER_PREFIX = /^\s*(user|human|you|me|我|问)\s*[:：]\s*/i;

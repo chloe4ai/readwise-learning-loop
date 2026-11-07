@@ -186,3 +186,26 @@ test('"you reacted" fires on aha replies, not on confusion or pushback', () => {
   assert.ok(reacted('原来如此！'));
   assert.ok(!reacted('我不明白'));
 });
+
+const gptMsg = (role, parts, extra = {}) => ({ author: { role }, content: { content_type: 'text', parts }, ...extra });
+
+test('ChatGPT without a usable current_node follows the newest leaf', () => {
+  const mapping = {
+    r: { parent: null, children: ['u'] },
+    u: { parent: 'r', children: ['old', 'new'], message: gptMsg('user', ['q?'], { create_time: 1 }) },
+    old: { parent: 'u', children: [], message: gptMsg('assistant', ['ABANDONED'], { create_time: 2 }) },
+    new: { parent: 'u', children: [], message: gptMsg('assistant', ['REGENERATED'], { create_time: 3 }) },
+  };
+  assert.deepEqual(parseChatGPTExport([{ title: 't', mapping }])[0].turns.map((t) => t.text), ['q?', 'REGENERATED']);
+  assert.deepEqual(parseChatGPTExport([{ title: 't', current_node: 'gone', mapping }])[0].turns.map((t) => t.text), ['q?', 'REGENERATED']);
+});
+
+test('ChatGPT reads voice transcriptions and skips tool-addressed messages', () => {
+  const voice = (t) => ({ content_type: 'audio_transcription', text: t });
+  const [c] = parseChatGPTExport([{ title: 't', current_node: 'b', mapping: {
+    u: { parent: null, children: ['a'], message: { author: { role: 'user' }, content: { content_type: 'multimodal_text', parts: [voice('why is the sky blue?')] } } },
+    a: { parent: 'u', children: ['b'], message: gptMsg('assistant', ['User asked about sky.'], { recipient: 'bio' }) },
+    b: { parent: 'a', children: [], message: { author: { role: 'assistant' }, recipient: 'all', content: { content_type: 'multimodal_text', parts: [voice('Rayleigh scattering.')] } } },
+  } }]);
+  assert.deepEqual(c.turns.map((t) => [t.role, t.text]), [['user', 'why is the sky blue?'], ['assistant', 'Rayleigh scattering.']]);
+});
