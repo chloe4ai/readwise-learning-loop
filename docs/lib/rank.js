@@ -49,13 +49,20 @@ export function dueness(h, now = Date.now()) {
   let days;
   if (typeof h.daysSinceReview === 'number') days = h.daysSinceReview;
   else if (h.lastReviewed) days = (now - new Date(h.lastReviewed).getTime()) / 86400000;
-  else return 1;
+  if (!Number.isFinite(days)) return 1; // never reviewed, or an unparseable date
   const interval = Math.max(1, h.intervalDays || 7);
   return Math.max(0, Math.min(1, days / interval));
 }
 
 // Untitled highlights are not "the same book" as each other.
 const sameSource = (a, b) => !!a.title && a.title === b.title;
+
+// Weights and lambda are fractions; anything else (NaN, negative, > 1) is clamped into [0, 1].
+export function clamp01(x, fallback) {
+  const v = Number(x);
+  if (!Number.isFinite(v)) return fallback;
+  return Math.max(0, Math.min(1, v));
+}
 
 function docText(h) {
   return [h.text, h.title, h.author, (h.tags || []).join(' ')].join(' ');
@@ -74,6 +81,9 @@ export function baselineReview(library, { n = 5, now = Date.now(), seed = 7 } = 
 }
 
 export function contextualReview(library, context, { n = 5, wRel = 0.65, wDue = 0.35, lambda = 0.75, now = Date.now() } = {}) {
+  wRel = clamp01(wRel, 0.65);
+  wDue = clamp01(wDue, 0.35);
+  lambda = clamp01(lambda, 0.75);
   const bm = new BM25(library.map(docText));
   const q = tokenize(context);
   const raw = library.map((h, i) => ({ h, i, ...bm.score(q, i) }));

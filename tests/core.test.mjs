@@ -234,3 +234,17 @@ test('MMR does not treat untitled highlights as one source', () => {
   const distinct = contextualReview(mk(['A', 'B']), 'auction', { n: 2 })[1].mmr;
   assert.equal(untitled, distinct);
 });
+
+test('weights are clamped and a bad lastReviewed means never reviewed', () => {
+  assert.equal(dueness({ lastReviewed: 'not a date' }), 1);
+  const r = contextualReview([{ text: 'zebra', title: 'a', lastReviewed: 'bad' }, { text: 'auction auction', title: 'b', daysSinceReview: 7 }], 'auction', { n: 2 });
+  assert.ok(r.every((x) => Number.isFinite(x.final)));
+  // wDue = -0.5 must not reward recently reviewed highlights
+  const lib = [{ text: 'x', title: 'a', daysSinceReview: 0 }, { text: 'y', title: 'b', daysSinceReview: 30 }];
+  const neg = contextualReview(lib, '', { n: 2, wRel: 1.5, wDue: -0.5 });
+  assert.ok(neg.every((x) => x.final >= 0 && x.final <= 1), JSON.stringify(neg.map((x) => x.final)));
+  // lambda = 1.5 must not reward similarity
+  const sim = [{ text: 'auction bid', title: 'A' }, { text: 'auction bid shading', title: 'A' }, { text: 'auction reserve', title: 'B' }];
+  assert.ok(contextualReview(sim, 'auction', { n: 2, lambda: 1.5 }).some((x) => x.h.title === 'B'));
+  assert.ok(recommendBooks(library, catalog, 'ad auctions', { wTaste: NaN, lambda: -3 }).picks.every((p) => Number.isFinite(p.final)));
+});

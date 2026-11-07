@@ -13,7 +13,7 @@
 // highlights it came from. Everything runs client-side; relevance is BM25 (see rank.js).
 
 import { tokenize, jaccard, isCJKHeavy } from './text.js';
-import { BM25 } from './rank.js';
+import { BM25, clamp01 } from './rank.js';
 
 const AI_AUTHORS = new Set(['claude', 'chatgpt', 'ai conversation']);
 
@@ -71,6 +71,10 @@ export function storeDefault(catalog, { n = 5 } = {}) {
 export function recommendBooks(library, catalog, context = '', {
   n = 5, wTaste = 0.35, wIntent = 0.5, wGap = 0.15, lambda = 0.7, supportK = 3,
 } = {}) {
+  wTaste = clamp01(wTaste, 0.35);
+  wIntent = clamp01(wIntent, 0.5);
+  wGap = clamp01(wGap, 0.15);
+  lambda = clamp01(lambda, 0.7);
   const owned = ownedBookIds(library, catalog);
   const bm = new BM25(catalog.map(bookDoc));
 
