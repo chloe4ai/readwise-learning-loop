@@ -171,12 +171,43 @@ function splitUnits(text) {
       units.push({ raw: line, hadBold, bullet: true });
       continue;
     }
-    const parts = isCJKHeavy(line)
-      ? line.split(/(?<=[。！？])/)
-      : line.split(/(?<=[.!?])\s+(?=["“(\[A-Z0-9])/);
+    const parts = splitSentences(line);
     for (const p of parts) if (p.trim()) units.push({ raw: p.trim(), hadBold: /\*\*[^*]+\*\*/.test(p), bullet: false });
   }
   return units;
+}
+
+// Words ending in "." that rarely end a sentence.
+const ABBREV = new Set(['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'st.', 'vs.', 'etc.', 'inc.', 'ltd.', 'co.',
+  'corp.', 'no.', 'fig.', 'approx.', 'cf.', 'al.', 'jan.', 'feb.', 'mar.', 'apr.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.']);
+const isAbbrev = (word) => {
+  const w = word.replace(/^["“'‘(\[]+/, '').toLowerCase();
+  return ABBREV.has(w) || /^([a-z]\.){2,}$/.test(w) || /^[a-z]\.$/.test(w); // e.g., U.S., initials
+};
+// Sentence end: punctuation, then any closing quotes/brackets, which stay with the sentence.
+const SENT_END = /([。！？]|[.!?]+)([”’"'」』）)\]]*)/g;
+
+export function splitSentences(line) {
+  const cjk = isCJKHeavy(line);
+  const out = [];
+  let start = 0;
+  for (const m of line.matchAll(SENT_END)) {
+    const end = m.index + m[0].length;
+    const p = m[1];
+    let cut;
+    if (/[。！？]/.test(p)) cut = true; // full-width marks end a sentence in any script
+    else if (cjk && /[?!]/.test(p)) cut = true; // Chinese typed with ASCII ?!
+    else if (cjk) cut = false;
+    else {
+      cut = /^\s+["“(\[A-Z0-9\p{Script=Han}]/u.test(line.slice(end));
+      if (cut && p === '.') cut = !isAbbrev(line.slice(start, m.index + 1).split(/\s+/).pop());
+    }
+    if (!cut) continue;
+    out.push(line.slice(start, end));
+    start = end;
+  }
+  out.push(line.slice(start));
+  return out.map((x) => x.trim()).filter(Boolean);
 }
 
 export function scoreUnit(unit, ctx) {

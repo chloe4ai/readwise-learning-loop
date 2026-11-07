@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { tokenize, stripMarkdown, jaccard } from '../docs/lib/text.js';
-import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights, isAha } from '../docs/lib/extract.js';
+import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights, isAha, splitSentences } from '../docs/lib/extract.js';
 import { BM25, dueness, contextualReview, baselineReview } from '../docs/lib/rank.js';
 import { toApiHighlight, toCSV, pushHighlights, SOURCE_TYPE } from '../docs/lib/readwise.js';
 
@@ -217,4 +217,13 @@ test('tokenize keeps neighbours of stop characters and normalizes width and acce
   assert.deepEqual(tokenize('café naïve'), ['cafe', 'naive']);
   assert.deepEqual(tokenize('𠀀𠀁'), ['𠀀𠀁']);
   assert.deepEqual(tokenize('日本語のテキスト'), ['日本', '本語', 'テキ', 'キス', 'スト']);
+});
+
+test('sentence splitting respects abbreviations, CJK punctuation and closing quotes', () => {
+  assert.deepEqual(splitSentences('Dr. Smith showed that auctions are truthful. U.S. rules differ, e.g. Fed rules. Mrs. Lee agreed.'),
+    ['Dr. Smith showed that auctions are truthful.', 'U.S. rules differ, e.g. Fed rules.', 'Mrs. Lee agreed.']);
+  assert.deepEqual(splitSentences('使用 React Server Components 时 hydration mismatch 很常见。另外 useEffect hook 不会在 server 运行。'),
+    ['使用 React Server Components 时 hydration mismatch 很常见。', '另外 useEffect hook 不会在 server 运行。']);
+  assert.deepEqual(splitSentences('他说：“复利是世界第八大奇迹。”然后他解释了原因。'), ['他说：“复利是世界第八大奇迹。”', '然后他解释了原因。']);
+  assert.deepEqual(splitSentences('复利为什么重要?因为时间会放大收益!所以越早越好。'), ['复利为什么重要?', '因为时间会放大收益!', '所以越早越好。']);
 });
