@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { tokenize, stripMarkdown, jaccard } from '../docs/lib/text.js';
-import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights } from '../docs/lib/extract.js';
+import { detectAndParse, parseChatGPTExport, parseTranscript, extractHighlights, isAha } from '../docs/lib/extract.js';
 import { BM25, dueness, contextualReview, baselineReview } from '../docs/lib/rank.js';
 import { toApiHighlight, toCSV, pushHighlights, SOURCE_TYPE } from '../docs/lib/readwise.js';
 
@@ -169,4 +169,20 @@ test('large libraries do not overflow the call stack', () => {
   assert.equal(recommendBooks(big, catalog, 'auction').picks.length, 5);
   const huge = Array.from({ length: 150000 }, (_, i) => ({ text: `w${i % 50}`, title: `t${i}`, daysSinceReview: 1 }));
   assert.equal(contextualReview(huge, 'w1', { n: 1 }).length, 1);
+});
+
+test('"you reacted" fires on aha replies, not on confusion or pushback', () => {
+  for (const r of ['Oh interesting!', "I didn't know that", '原来如此', '原来是这样', '原来复利这么厉害啊', 'TIL about bid shading',
+    'ok that makes sense now', 'got it, thanks', '懂了', '学到了'])
+    assert.ok(isAha(r), r);
+  for (const r of ['我不明白', '原来的方案更好', 'Oh no, that is wrong.', 'it no longer makes sense', 'I see no reason',
+    "That doesn't make sense", "I don't understand", "I'm confused", '没懂', '这不对', 'until tomorrow', 'ohm law'])
+    assert.ok(!isAha(r), r);
+  const convo = (reply) => [{ id: 1, title: 't', source: 'claude', turns: [
+    { role: 'user', text: '什么是复利？' },
+    { role: 'assistant', text: '复利是指利息也会继续产生利息，时间越长效果越明显。' },
+    { role: 'user', text: reply }] }];
+  const reacted = (reply) => extractHighlights(convo(reply), { minScore: -99 })[0].reasons.includes('you reacted to it');
+  assert.ok(reacted('原来如此！'));
+  assert.ok(!reacted('我不明白'));
 });

@@ -130,7 +130,16 @@ const SIGNALS = [
 ];
 
 const FILLER = /^(great question|good question|sure|certainly|absolutely|of course|here('s| is| are)|let me|i can|i'd|i would|happy to|hope this|in summary|to summarize|overall|好的|当然|希望|总结一下)/i;
-const LEARNED = /\b(got it|makes sense|interesting|i see|til|didn'?t know|never knew|aha|oh)\b|明白|懂了|原来|学到|有意思|没想到/i;
+// "You reacted to it": the next user message says they learned something.
+// English phrases match as whole words; 原来 only counts in its "aha" forms (原来如此, 原来…啊),
+// not as "original" (原来的方案). Confusion or pushback in the reply cancels the signal.
+const LEARNED = /\b(got it|makes sense|interesting|i see|til|didn'?t know|never knew|aha|oh)\b|明白|懂了|原来如此|原来是这样|原来(?!的).{0,30}?[啊呀]|学到|有意思|没想到/i;
+const NOT_LEARNED = /不明白|不太明白|没明白|不懂|没懂|看不懂|不对|不太对|错了|没道理|\b(wrong|incorrect|confus\w*|don'?t (understand|get it|see)|do not (understand|see)|doesn'?t|does not|no longer|not sure|makes no sense|i see no|oh no|still (don'?t|not))\b/i;
+
+export function isAha(text) {
+  const head = String(text || '').slice(0, 200);
+  return LEARNED.test(head) && !NOT_LEARNED.test(head);
+}
 const ASKED = /\?|？|\b(what|why|how|explain|difference|when should)\b|什么|为什么|怎么|区别|是不是/i;
 
 function splitUnits(text) {
@@ -189,7 +198,7 @@ export function extractHighlights(conversations, { perConversation = 4, perTurn 
       const prevUser = [...convo.turns.slice(0, i)].reverse().find((t) => t.role === 'user');
       const nextUser = convo.turns.slice(i + 1).find((t) => t.role === 'user');
       const answersQuestion = !!(prevUser && ASKED.test(prevUser.text));
-      const followedByAha = !!(nextUser && LEARNED.test(nextUser.text.slice(0, 200)));
+      const followedByAha = !!(nextUser && isAha(nextUser.text));
       splitUnits(turn.text).forEach((unit, position) => {
         const s = scoreUnit(unit, { answersQuestion, followedByAha, position });
         if (s.score >= minScore) {
