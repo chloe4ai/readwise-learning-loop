@@ -189,9 +189,11 @@ function splitUnits(text) {
 
 // Words ending in "." that rarely end a sentence.
 const ABBREV = new Set(['mr.', 'mrs.', 'ms.', 'dr.', 'prof.', 'sr.', 'jr.', 'st.', 'vs.', 'etc.', 'inc.', 'ltd.', 'co.',
-  'corp.', 'no.', 'fig.', 'approx.', 'cf.', 'al.', 'jan.', 'feb.', 'mar.', 'apr.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.']);
-const isAbbrev = (word) => {
+  'corp.', 'fig.', 'approx.', 'cf.', 'al.', 'jan.', 'feb.', 'mar.', 'apr.', 'aug.', 'sept.', 'oct.', 'nov.', 'dec.']);
+const isAbbrev = (word, rest = '') => {
   const w = word.replace(/^["“'‘(\[]+/, '').toLowerCase();
+  // "No." is an abbreviation only before a number ("No. 5"); "The answer is no." ends a sentence.
+  if (w === 'no.') return /^\s+\d/.test(rest);
   return ABBREV.has(w) || /^([a-z]\.){2,}$/.test(w) || /^[a-z]\.$/.test(w); // e.g., U.S., initials
 };
 // Sentence end: punctuation, then any closing quotes/brackets, which stay with the sentence.
@@ -210,7 +212,7 @@ export function splitSentences(line) {
     else if (cjk) cut = false;
     else {
       cut = /^\s+["“(\[A-Z0-9\p{Script=Han}]/u.test(line.slice(end));
-      if (cut && p === '.') cut = !isAbbrev(line.slice(start, m.index + 1).split(/\s+/).pop());
+      if (cut && p === '.') cut = !isAbbrev(line.slice(start, m.index + 1).split(/\s+/).pop(), line.slice(end));
     }
     if (!cut) continue;
     out.push(line.slice(start, end));

@@ -226,6 +226,9 @@ test('sentence splitting respects abbreviations, CJK punctuation and closing quo
     ['使用 React Server Components 时 hydration mismatch 很常见。', '另外 useEffect hook 不会在 server 运行。']);
   assert.deepEqual(splitSentences('他说：“复利是世界第八大奇迹。”然后他解释了原因。'), ['他说：“复利是世界第八大奇迹。”', '然后他解释了原因。']);
   assert.deepEqual(splitSentences('复利为什么重要?因为时间会放大收益!所以越早越好。'), ['复利为什么重要?', '因为时间会放大收益!', '所以越早越好。']);
+  // "No." abbreviates only before a number.
+  assert.deepEqual(splitSentences('See No. 5 for details. The short answer is no. Index funds win.'),
+    ['See No. 5 for details.', 'The short answer is no.', 'Index funds win.']);
 });
 
 test('MMR does not treat untitled highlights as one source', () => {
